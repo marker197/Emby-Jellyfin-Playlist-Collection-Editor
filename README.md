@@ -1,7 +1,3 @@
-Here's a Reddit-friendly breakdown:
-
----
-
 ## **Emby Chronological Playlist Generator — Complete Feature Breakdown**
 
 **What it is:** A single-file HTML app that creates perfectly-ordered movie playlists on your Emby server. No installation, no cloud service, runs entirely in your browser.
@@ -73,5 +69,3 @@ Here's a Reddit-friendly breakdown:
 **Full instructions included** with step-by-step guides for every feature.
 
 ---
-
-Want me to adjust the tone or emphasize different features?
