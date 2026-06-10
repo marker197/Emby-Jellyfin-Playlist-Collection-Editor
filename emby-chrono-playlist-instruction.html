@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Emby Chrono Playlist — User Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --accent: #6c6bff;
+    --accent-light: rgba(108,107,255,0.12);
+    --success: #34c77b;
+    --success-light: rgba(52,199,123,0.12);
+    --warn: #f5a623;
+    --warn-light: rgba(245,166,35,0.12);
+    --danger: #ff5c5c;
+    --radarr: #f5a623;
+    --text: #1a1a2e;
+    --text2: #555570;
+    --text3: #888899;
+    --border: #e2e2ee;
+    --surface: #f8f8fc;
+    --surface2: #f0f0f8;
+    --bg: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .cover {
+    background: linear-gradient(135deg, #1a1a3e 0%, #2d2d6e 50%, #1a1a3e 100%);
+    color: #fff;
+    padding: 64px 48px 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(108,107,255,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .cover-icon { width: 56px; height: 56px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+  .cover h1 { font-size: 36px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 8px; }
+  .cover p  { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 0; }
+  .cover-meta { margin-top: 32px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .cover-meta span { font-size: 12px; color: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 12px; }
+
+  .layout { display: grid; grid-template-columns: 230px 1fr; min-height: calc(100vh - 200px); }
+
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 32px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); padding: 0 20px; margin-bottom: 8px; margin-top: 20px; }
+  .sidebar-label:first-child { margin-top: 0; }
+  .sidebar a { display: flex; align-items: center; gap: 8px; padding: 7px 20px; font-size: 13px; font-weight: 500; color: var(--text2); text-decoration: none; border-left: 2px solid transparent; transition: color .15s, border-color .15s, background .15s; }
+  .sidebar a:hover { color: var(--accent); background: var(--accent-light); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); }
+  .sidebar .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--border); }
+  .sidebar a.active .dot { background: var(--accent); }
+  .sidebar .new-badge { font-size: 9px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 3px; padding: 1px 5px; letter-spacing: .04em; text-transform: uppercase; }
+
+  .content { padding: 48px 56px; max-width: 840px; }
+
+  .section { margin-bottom: 60px; scroll-margin-top: 24px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--border); }
+  .section-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .section-icon.blue   { background: var(--accent-light); color: var(--accent); }
+  .section-icon.green  { background: var(--success-light); color: var(--success); }
+  .section-icon.orange { background: var(--warn-light); color: var(--warn); }
+  .section-icon.red    { background: rgba(255,92,92,0.12); color: var(--danger); }
+  .section-header h2 { font-size: 20px; font-weight: 700; letter-spacing: -.3px; flex: 1; }
+  .section-num { font-size: 11px; font-weight: 600; color: var(--text3); background: var(--surface2); border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+  .section-new { font-size: 11px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+  .section-updated { font-size: 11px; font-weight: 700; background: var(--warn-light); color: #7a5010; border: 1px solid rgba(245,166,35,.3); border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+
+  h3 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: var(--text); }
+  p  { color: var(--text2); margin-bottom: 12px; }
+  p:last-child { margin-bottom: 0; }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+  .step { display: flex; gap: 14px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-body { flex: 1; min-width: 0; }
+  .step-body strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .step-body p { font-size: 13px; margin: 0; }
+
+  .callout { border-radius: 8px; padding: 13px 16px; margin: 16px 0; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .callout.tip  { background: var(--accent-light);  border: 1px solid rgba(108,107,255,.25); color: #3a3a8a; }
+  .callout.note { background: var(--success-light); border: 1px solid rgba(52,199,123,.25);  color: #1a5a3a; }
+  .callout.warn { background: var(--warn-light);    border: 1px solid rgba(245,166,35,.3);   color: #6a4010; }
+  .callout.cors { background: rgba(255,92,92,.08);  border: 1px solid rgba(255,92,92,.25);   color: #6a1a1a; }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout-body strong { font-weight: 600; display: block; margin-bottom: 2px; }
+
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .feature-card .fc-icon { font-size: 20px; margin-bottom: 8px; }
+  .feature-card strong { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  .feature-card p { font-size: 12px; color: var(--text3); margin: 0; }
+  .feature-card.new { border-color: var(--accent); background: var(--accent-light); }
+  .feature-card.new p { color: var(--accent); opacity: .8; }
+
+  code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--accent); }
+
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 4px; padding: 2px 7px; margin-right: 4px; }
+  .tag.blue   { background: var(--accent-light); color: var(--accent); }
+  .tag.green  { background: var(--success-light); color: #1a6a3a; }
+  .tag.orange { background: var(--warn-light); color: #7a5010; }
+  .tag.red    { background: rgba(255,92,92,.1); color: #8a1a1a; }
+
+  .info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0; }
+  .info-table th { text-align: left; padding: 8px 12px; background: var(--surface2); color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .info-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+  .info-table tr:last-child td { border-bottom: none; }
+  .info-table td:first-child { font-weight: 500; color: var(--text); white-space: nowrap; }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .pill { font-size: 11px; border-radius: 5px; padding: 3px 10px; border: 1px solid; }
+  .pill.found   { border-color: rgba(52,199,123,.4);  color: #1a6a3a; background: var(--success-light); }
+  .pill.missing { border-color: rgba(255,92,92,.4);   color: #8a1a1a; background: rgba(255,92,92,.08); cursor: pointer; }
+  .pill.sent    { border-color: rgba(245,166,35,.4);  color: #7a5010; background: var(--warn-light); }
+
+  .csv-example { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); margin: 12px 0; line-height: 1.8; }
+  .csv-example .csv-header { color: var(--text3); font-weight: 600; }
+  .csv-example .csv-row { color: var(--text); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  @media print {
+    .sidebar { display: none; }
+    .layout  { grid-template-columns: 1fr; }
+    .content { padding: 24px; max-width: none; }
+    .cover   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .content { padding: 24px 20px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .cover { padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="cover-icon">
+    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+    </svg>
+  </div>
+  <h1>Emby Chrono Playlist</h1>
+  <p>User Guide — Create, manage and refresh chronological movie playlists on your Emby server</p>
+  <div class="cover-meta">
+    <span>Version 4.1</span>
+    <span>Local HTML App</span>
+    <span>100+ franchises built-in</span>
+    <span>Persistent login</span>
+    <span>TMDB enrichment</span>
+    <span>Bulk operations</span>
+    <span>Network transparency</span>
+    <span>TMDB override / copy mode</span>
+    <span>Franchise source toggle</span>
+    <span>Conflict resolution</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-label">Getting started</div>
+    <a href="#overview" class="active"><div class="dot"></div>Overview</a>
+    <a href="#requirements"><div class="dot"></div>Requirements</a>
+    <a href="#login"><div class="dot"></div>Connecting to Emby</a>
+    <a href="#smart-detect"><div class="dot"></div>First-run Detection <span class="new-badge">new</span></a>
+
+    <div class="sidebar-label">Core features</div>
+    <a href="#libraries"><div class="dot"></div>Movie Libraries</a>
+    <a href="#create"><div class="dot"></div>Creating Playlists</a>
+    <a href="#franchise-source"><div class="dot"></div>Franchise Source Toggle <span class="new-badge">new</span></a>
+    <a href="#preview"><div class="dot"></div>Preview Matches</a>
+    <a href="#bulk"><div class="dot"></div>Bulk Mode</a>
+    <a href="#collections"><div class="dot"></div>Using Collections</a>
+    <a href="#refresh"><div class="dot"></div>Refreshing Playlists</a>
+
+    <div class="sidebar-label">Franchise management</div>
+    <a href="#search"><div class="dot"></div>Searching Franchises</a>
+    <a href="#source-labels"><div class="dot"></div>Franchise Source Labels <span class="new-badge">new</span></a>
+    <a href="#manage"><div class="dot"></div>Editing Franchises</a>
+    <a href="#custom"><div class="dot"></div>Adding Custom Franchises</a>
+    <a href="#conflict"><div class="dot"></div>Conflict Resolution <span class="new-badge">new</span></a>
+    <a href="#csv"><div class="dot"></div>Importing CSV</a>
+    <a href="#tmdb"><div class="dot"></div>TMDB Enrichment</a>
+    <a href="#tmdb-modes"><div class="dot"></div>TMDB Refresh Modes <span class="new-badge">new</span></a>
+
+    <div class="sidebar-label">Radarr integration</div>
+    <a href="#radarr"><div class="dot"></div>Radarr Setup</a>
+    <a href="#reconnect"><div class="dot"></div>Auto-Reconnect</a>
+    <a href="#requesting"><div class="dot"></div>Requesting Missing Movies</a>
+    <a href="#addall"><div class="dot"></div>Send All Missing</a>
+
+    <div class="sidebar-label">Trakt integration</div>
+    <a href="#trakt"><div class="dot"></div>Trakt Authentication <span class="new-badge">new</span></a>
+    <a href="#trakt-lists"><div class="dot"></div>Importing Lists <span class="new-badge">new</span></a>
+
+    <div class="sidebar-label">Settings &amp; backup</div>
+    <a href="#settings"><div class="dot"></div>Settings Modal <span class="new-badge">new</span></a>
+    <a href="#backup"><div class="dot"></div>Backup &amp; Restore <span class="new-badge">new</span></a>
+
+    <div class="sidebar-label">Privacy &amp; reference</div>
+    <a href="#network"><div class="dot"></div>Network Activity</a>
+    <a href="#matching"><div class="dot"></div>Title Matching</a>
+    <a href="#franchises"><div class="dot"></div>Built-in Franchise List</a>
+    <a href="#jellyfin"><div class="dot"></div>Jellyfin / Plex <span class="new-badge">new</span></a>
+    <a href="#tips"><div class="dot"></div>Tips &amp; Troubleshooting</a>
+  </nav>
+
+  <main class="content">
+
+    <!-- ── OVERVIEW ───────────────────────────────────────────────────────── -->
+    <div class="section" id="overview">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2>Overview</h2>
+        <span class="section-num">01</span>
+      </div>
+
+      <p>Emby Chrono Playlist is a single HTML file you save to your computer and open in any web browser. It connects directly to your local Emby server over your home network — no cloud service, no installation, no dependencies.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card new">
+          <div class="fc-icon">👁️</div>
+          <strong>Preview before creating</strong>
+          <p>Dry-run any playlist to see exactly which library movies match each franchise title before writing anything</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">⚡</div>
+          <strong>Bulk operations</strong>
+          <p>Tick multiple franchises and create them all in one batch — ideal for a fresh Emby install</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">✨</div>
+          <strong>Smart first-run detection</strong>
+          <p>On your first login the app scans your library and suggests franchises you already have most of</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🎞️</div>
+          <strong>TMDB enrichment</strong>
+          <p>Optional API key to keep franchise lists current — pulls new releases automatically</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🌐</div>
+          <strong>Network transparency</strong>
+          <p>Clear list of every external connection the app may make, with live activity indicators</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🔐</div>
+          <strong>Persistent login</strong>
+          <p>Optional "remember me" checkbox saves your Emby credentials for one-click reconnect</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🎬</div>
+          <strong>Create Playlists</strong>
+          <p>Pick a franchise, match it against your library, and build a correctly ordered playlist in seconds</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🔄</div>
+          <strong>Refresh Playlists</strong>
+          <p>Re-sort existing playlists and automatically pull in newly added library movies</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">📋</div>
+          <strong>100+ Franchises Built-in</strong>
+          <p>Marvel, Star Wars, James Bond, Alien, Rocky, Toy Story and 94 more — all pre-loaded</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">✏️</div>
+          <strong>Edit Franchise Lists</strong>
+          <p>Add, remove or reorder movies in any built-in or custom franchise list</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🔀</div>
+          <strong>TMDB override or copy</strong>
+          <p>Choose whether a TMDB refresh replaces built-in lists or creates a parallel TMDB copy alongside them</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🎯</div>
+          <strong>Franchise source toggle</strong>
+          <p>Switch between built-in/uploaded order and TMDB order per playlist, on both Create and Refresh</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">⚠️</div>
+          <strong>Conflict resolution</strong>
+          <p>When uploading a franchise that already exists as built-in, choose to override it or save as a separate custom version</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-icon">🏷️</div>
+          <strong>Three-way source labels</strong>
+          <p>Franchise lists are clearly labelled built-in, <span style="color:#01b4e4;">tmdb</span>, or <span style="color:var(--accent);">custom</span> throughout the app</p>
+        </div>
+          <strong>Import CSV</strong>
+          <p>Drag and drop a CSV file to add or update franchise lists in bulk</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🛰️</div>
+          <strong>Radarr Auto-Reconnect</strong>
+          <p>Radarr servers are pinged every 60 seconds and automatically reconnected if they drop</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">⚡</div>
+          <strong>Send All Missing to Radarr</strong>
+          <p>One button sends every missing franchise movie to Radarr — even if none exist in your library yet</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🎯</div>
+          <strong>Precision Title Matching</strong>
+          <p>Rewritten matching engine prevents false positives like RV appearing in the MCU playlist</p>
+        </div>
+        <div class="feature-card new">
+          <div class="fc-icon">🗂️</div>
+          <strong>Create from Collections</strong>
+          <p>Use an existing Emby collection as the movie source instead of scanning your whole library</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REQUIREMENTS ───────────────────────────────────────────────────── -->
+    <div class="section" id="requirements">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h2>Requirements</h2>
+        <span class="section-num">02</span>
+      </div>
+
+      <table class="info-table">
+        <thead><tr><th>Requirement</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td>Emby Server</td><td>Running on your local network, version 4.7 or later recommended</td></tr>
+          <tr><td>Emby username &amp; password</td><td>Your Emby account login — entered on the login screen</td></tr>
+          <tr><td>Web Browser</td><td>Chrome, Firefox, Safari or Edge — any modern browser works</td></tr>
+          <tr><td>Network access</td><td>The browser must be able to reach your Emby server URL</td></tr>
+          <tr><td>Radarr (optional)</td><td>Only required for requesting missing movie downloads</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout cors">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>CORS — opening directly from a file</strong>
+          If you open the HTML from your desktop (<code>file://</code> address) some browsers block the Emby API calls. Fix this by serving the file locally: run <code>python3 -m http.server 8080</code> in the same folder, then open <code>http://localhost:8080</code> in your browser. Alternatively, add <code>*</code> to the allowed CORS origins in Emby Dashboard → Networking.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LOGIN ──────────────────────────────────────────────────────────── -->
+    <div class="section" id="login">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h2>Connecting to Emby</h2>
+        <span class="section-num">03</span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Enter your Server URL</strong>
+            <p>The full address of your Emby server including port — e.g. <code>http://192.168.1.10:8096</code>. No trailing slash. Use <code>https://</code> if your server has SSL enabled.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Enter your Emby username and password</strong>
+            <p>Your standard Emby account credentials. Use the eye icon to toggle password visibility.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click Connect</strong>
+            <p>The app authenticates, loads your movie libraries and playlists, and opens the main panel. A green dot confirms you are connected. Settings are saved to browser storage so they persist between sessions.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>To disconnect, click the <strong>Disconnect</strong> button in the top-right corner of the main panel.</p>
+    </div>
+
+    <!-- ── SMART FIRST-RUN DETECTION ─────────────────────────────────────── -->
+    <div class="section" id="smart-detect">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h2>Smart First-Run Detection</h2>
+        <span class="section-num">04</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>On the very first login from any device, the app automatically scans your library and works out which franchises you have substantial coverage of. A welcome overlay then suggests playlists you could create in one click — no manual searching needed.</p>
+
+      <h3>How it works</h3>
+      <p>After login, the app calls Emby once to pull every movie in your selected libraries, then runs every built-in franchise against the title-matching engine. Any franchise where you have <strong>at least 3 movies present AND at least 50%</strong> of the franchise list in your library is shown as a recommendation.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Welcome overlay appears</strong>
+            <p>On your first successful login, a dark overlay shows a list of detected franchises with how many films of each you already own (e.g. <em>"Marvel Cinematic Universe — 28 of 33 films in your library"</em>).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Tick the franchises you want</strong>
+            <p>Click any row to toggle it on. Pick as many or as few as you like. Up to 12 best matches are shown.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click Create Selected</strong>
+            <p>The app creates each playlist sequentially in chronological order using the franchise watch order. Progress is shown per franchise.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Only shows once</strong>
+          The welcome overlay only appears on the very first successful login. Once dismissed (via Skip or Create Selected) it never reappears, even on subsequent logins. You can always create the same playlists later from the normal search panel.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Quick start tip</strong>
+          If you're new and have a large library, just let the app pick everything for you — tick all suggestions, hit Create Selected, and you'll have a dozen perfectly ordered franchise playlists in under a minute.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- ── LIBRARIES ─────────────────────────────────────────────────────── -->
+    <div class="section" id="libraries">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h7"/></svg>
+        </div>
+        <h2>Movie Libraries</h2>
+        <span class="section-num">05</span>
+      </div>
+
+      <p>After connecting, the app pulls your Emby movie libraries and displays them as checkboxes. All are ticked by default. Click any row to toggle it — checked libraries (highlighted blue) will be scanned when creating or refreshing playlists.</p>
+
+      <table class="info-table">
+        <thead><tr><th>Use case</th><th>Recommended selection</th></tr></thead>
+        <tbody>
+          <tr><td>Single library</td><td>Leave all checked</td></tr>
+          <tr><td>Separate 4K and HD libraries</td><td>Check both for widest match, or just one for a single-quality playlist</td></tr>
+          <tr><td>Mixed-content library</td><td>The app filters to Movie type only — TV shows and music are ignored</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Selection persists for the whole session</strong>
+          Your library choices apply to every create and refresh action until you disconnect or change them.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CREATE ────────────────────────────────────────────────────────── -->
+    <div class="section" id="create">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <h2>Creating a New Playlist</h2>
+        <span class="section-num">06</span>
+        <span class="section-updated">Updated</span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Search for a franchise</strong>
+            <p>Type all or part of a name — e.g. <code>marvel</code>, <code>alien</code>, <code>bond</code> — and press Enter or click Search. Leave the box empty to see all franchises.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click a franchise card to select it</strong>
+            <p>It highlights blue and the Create panel opens below with a pre-filled playlist name.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Choose your movie order source</strong>
+            <p>A <strong>Movie order from</strong> toggle at the top of the Create panel lets you pick <strong>Built-in / Uploaded</strong> (the default — uses built-in or your custom/imported lists) or <strong>TMDB Order</strong> (uses the list fetched from TMDB, if you have run a TMDB refresh). See the <a href="#franchise-source" style="color:var(--accent);">Franchise Source Toggle</a> section for full details.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Choose your movie source</strong>
+            <p>A second toggle lets you pick where movies come from. <strong>Scan Library</strong> (default) searches your checked Emby libraries. <strong>Use Collection</strong> lets you pick an existing Emby collection. See the <a href="#collections" style="color:var(--accent);">Using Collections</a> section for details.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Set options and click Create Playlist</strong>
+            <p>Choose the <strong>User account</strong>, <strong>Sort order</strong> (franchise watch order or release year), and edit the <strong>Playlist name</strong> if needed. A progress bar shows each step as it runs.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Understanding the result pills</h3>
+      <div class="pill-row">
+        <span class="pill found">Iron Man</span>
+        <span class="pill found">The Avengers</span>
+        <span class="pill missing">Black Widow ＋</span>
+        <span class="pill sent">Eternals ✓</span>
+      </div>
+      <table class="info-table" style="margin-top:12px;">
+        <thead><tr><th>Colour</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag green">Green</span></td><td>Found in your library and added to the playlist</td></tr>
+          <tr><td><span class="tag red">Red</span></td><td>Not found in your library — click to request via Radarr</td></tr>
+          <tr><td><span class="tag orange">Amber</span></td><td>Already sent to Radarr for download</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>No movies found at all?</strong>
+          If none of the franchise movies are in your library yet, all pills appear red and a <strong>Send All Missing to Radarr</strong> bar appears automatically so you can request the entire franchise in one click.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FRANCHISE SOURCE TOGGLE ──────────────────────────────────────── -->
+    <div class="section" id="franchise-source">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h2>Franchise Source Toggle — Built-in vs TMDB Order</h2>
+        <span class="section-num">07</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Both the <strong>Create Playlist</strong> and <strong>Refresh Playlist</strong> sections have a <strong>Movie order from</strong> toggle that controls which franchise list is used for ordering the movies in your playlist.</p>
+
+      <h3>The two modes</h3>
+      <table class="info-table">
+        <thead><tr><th>Mode</th><th>What it uses</th><th>When to use it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Built-in / Uploaded</strong></td>
+            <td>The built-in franchise list, or your custom override / imported CSV version if one exists</td>
+            <td>Default — best for most situations, uses carefully curated watch orders</td>
+          </tr>
+          <tr>
+            <td><strong>TMDB Order</strong></td>
+            <td>The list fetched from TMDB the last time you ran a TMDB refresh</td>
+            <td>When you want the very latest TMDB-sourced film order, e.g. to pick up a newly released sequel automatically</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>How it works</h3>
+      <p>When you select <strong>TMDB Order</strong> and a franchise is chosen, the app looks up the TMDB-sourced list for that franchise. If no TMDB data has been fetched yet for it, the app falls back to the built-in list and shows a warning prompting you to run a TMDB refresh first.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>TMDB Order and TMDB refresh modes work together</strong>
+          If you ran a TMDB refresh in <em>Override</em> mode, the built-in list is already updated with TMDB data — both toggle options give the same result. The TMDB Order toggle is most useful when you ran TMDB refresh in <em>Create separate TMDB copy</em> mode, so the two versions (built-in and TMDB) coexist and you can switch between them.
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>The toggle is independent per section</strong>
+          The Create section and Refresh section each have their own toggle. Changing one doesn't affect the other.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PREVIEW ───────────────────────────────────────────────────────── -->
+    <div class="section" id="preview">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h2>Preview Before Creating</h2>
+        <span class="section-num">08</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>The Preview button lets you dry-run any playlist creation without writing anything to Emby. It shows exactly which library movie will be picked for each franchise title, so you can spot mismatches and fix them <em>before</em> creating the playlist.</p>
+
+      <h3>How to use it</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Select a franchise and set options</strong>
+            <p>Search for a franchise, click to select it, choose your source mode (library or collection), sort order, and playlist name as normal.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click Preview Matches instead of Create</strong>
+            <p>The Preview button sits beside Create Playlist. A modal opens showing every franchise title in order with its matched library movie alongside.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Review the matches</strong>
+            <p>Each row is colour-coded: <span class="tag green">green</span> for a clean match, <span class="tag red">red</span> for a title not found in your library, and <span class="tag orange">amber</span> when the title has multiple possible matches (ambiguous).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Cancel to edit, or Create to proceed</strong>
+            <p>If something looks wrong, click Cancel, edit the franchise list in the Manage Franchises panel, and run Preview again. When you're happy, click Create with N movies to write the playlist to Emby.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Stats summary</h3>
+      <p>Above the row-by-row list, three counters show the totals at a glance:</p>
+      <table class="info-table">
+        <thead><tr><th>Counter</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag green">Matched</span></td><td>Number of franchise titles cleanly found in your library</td></tr>
+          <tr><td><span class="tag red">Missing</span></td><td>Number of franchise titles not in your library — would become red pills after creating</td></tr>
+          <tr><td><span class="tag orange">Ambiguous</span></td><td>Titles where multiple library movies could match — review carefully</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Use Preview to validate edited franchise lists</strong>
+          After editing a franchise in the Manage Franchises panel, run Preview to confirm the new title strings match your library correctly before committing to a playlist.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BULK ───────────────────────────────────────────────────────────── -->
+    <div class="section" id="bulk">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h2>Bulk Mode — Multiple Playlists at Once</h2>
+        <span class="section-num">09</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Bulk mode lets you select several franchises and create their playlists in a single operation. Perfect for setting up a fresh Emby install where you want a dozen franchise playlists ready to go.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Tick the Bulk mode checkbox</strong>
+            <p>Above the franchise search results, tick the <strong>Bulk mode</strong> checkbox. Each franchise row in the search results gains a tick-box on the left.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Select your franchises</strong>
+            <p>Click any franchise row to toggle its selection — selected rows highlight blue. A counter bar at the bottom shows how many you've picked. Use the search box to filter and pick from any category.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click Create Selected</strong>
+            <p>The bulk bar at the bottom of the franchise grid contains a Create Selected button. Click it to start the batch — the app scans your library once (efficient — no repeated work), then creates each playlist in order with progress shown per franchise.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Review the summary</strong>
+            <p>When finished, a summary tells you how many playlists were created, how many had no matching movies in your library, and any that failed. Created playlists immediately appear in the refresh dropdown.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Bulk mode vs single mode</h3>
+      <table class="info-table">
+        <thead><tr><th>Use bulk mode when…</th><th>Use single mode when…</th></tr></thead>
+        <tbody>
+          <tr><td>Setting up a new Emby install</td><td>Creating one specific playlist</td></tr>
+          <tr><td>Creating playlists for many franchises at once</td><td>You want to customise each playlist name</td></tr>
+          <tr><td>You don't need to preview each one individually</td><td>You want to preview matches before creating</td></tr>
+          <tr><td>Speed matters — library is scanned only once for all</td><td>You want to pick a specific user or collection per playlist</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Names are auto-generated in bulk mode</strong>
+          Each playlist created in bulk uses the format <em>"{Franchise Name} (Chronological)"</em>. To customise individual names, use single mode instead, or rename them in Emby afterwards.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COLLECTIONS ─────────────────────────────────────────────────── -->
+    <div class="section" id="collections">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h2>Creating a Playlist from a Collection</h2>
+        <span class="section-num">10</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>If you already have an Emby collection containing the movies you want, you can use it as the source instead of scanning your whole library. This is faster, more targeted, and useful when you have manually curated a collection in Emby.</p>
+
+      <h3>What is an Emby collection?</h3>
+      <p>An Emby collection (called a BoxSet internally) is a named group of movies you create in Emby by right-clicking films and choosing <em>Add to Collection</em>. Collections appear in your Emby dashboard under the Collections view. The app reads these directly from your server.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Select a franchise and open the Create panel</strong>
+            <p>Search for a franchise and click it to open the Create Emby Playlist panel below the search results.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click Use Collection</strong>
+            <p>The source toggle at the top of the Create panel has two options. Click <strong>Use Collection</strong> — it highlights blue and a collection dropdown appears below the toggle.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Select your collection</strong>
+            <p>The dropdown lists all Emby collections with their item counts. Choose the one that contains the franchise movies. Click the circular reload button beside the dropdown to refresh the list from Emby if needed.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Set remaining options and click Create Playlist</strong>
+            <p>Choose user, sort order and playlist name as normal, then click Create. The app fetches only the movies inside the selected collection and matches them against the franchise watch order. All the same features apply — green pills for matched films, red clickable pills for anything missing, and the Send All Radarr bar if needed.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Library scan vs collection — when to use each</h3>
+      <table class="info-table">
+        <thead><tr><th>Use case</th><th>Best source mode</th></tr></thead>
+        <tbody>
+          <tr><td>First time creating a franchise playlist</td><td><span class="tag blue">Scan Library</span> — finds everything you have across all libraries</td></tr>
+          <tr><td>You have a hand-picked Emby collection</td><td><span class="tag blue">Use Collection</span> — faster, only uses films you've already curated</td></tr>
+          <tr><td>Multiple libraries (4K + HD)</td><td><span class="tag blue">Scan Library</span> with both libraries checked</td></tr>
+          <tr><td>You want a playlist from a specific set</td><td><span class="tag blue">Use Collection</span> — gives you precise control over source films</td></tr>
+          <tr><td>No collections created yet in Emby</td><td><span class="tag blue">Scan Library</span> — collections must be created in Emby first</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Collections are pre-loaded on login</strong>
+          The collection list is fetched from Emby in the background as soon as you connect, so the dropdown is ready the moment you switch to collection mode. Use the reload button to pick up any collections created in Emby after you logged in.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>The source mode persists between franchise selections</strong>
+          If you switch to collection mode to create one playlist, it stays in collection mode when you select the next franchise — you don't need to toggle it again. Switch back to Scan Library at any time by clicking the Library button.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REFRESH ───────────────────────────────────────────────────────── -->
+    <div class="section" id="refresh">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <h2>Refreshing an Existing Playlist</h2>
+        <span class="section-num">11</span>
+        <span class="section-updated">Updated</span>
+      </div>
+
+      <p>Refresh does two things in a single operation: it <strong>adds any newly downloaded franchise movies</strong> that have appeared in your library since the playlist was created, then <strong>re-sorts the entire playlist</strong> into the correct chronological order.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Select a playlist from the dropdown</strong>
+            <p>All your Emby playlists are listed. Click the circular arrow button beside the dropdown to reload the list from Emby at any time.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Choose a franchise for ordering</strong>
+            <p>Select the franchise whose watch order you want to apply. All built-in franchises plus any TMDB-sourced or custom/imported ones are available. Built-in entries have no badge, TMDB entries are labelled <span class="tag blue">[tmdb]</span>, and custom ones show a <strong>★</strong> marker.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Choose your movie order source</strong>
+            <p>A <strong>Movie order from</strong> toggle below the franchise dropdown lets you pick <strong>Built-in / Uploaded</strong> (default) or <strong>TMDB Order</strong>. This controls which version of the franchise list drives the ordering — see <a href="#franchise-source" style="color:var(--accent);">Franchise Source Toggle</a> for full details.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Click Refresh Playlist</strong>
+            <p>The app scans your checked libraries for new franchise movies not yet in the playlist, adds them, then moves every item to its correct position. A progress bar shows the current movie being moved.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Use Refresh after a Radarr download completes</strong>
+          When Radarr finishes downloading a requested movie and Emby scans it in, click Refresh to slot it automatically into the right position without recreating the playlist.
+        </div>
+      </div>
+
+      <p>Any items in the playlist that don't match the franchise list are kept and sorted by production year, placed at the end after all matched titles.</p>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- ── SEARCH ────────────────────────────────────────────────────────── -->
+    <div class="section" id="search">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <h2>Searching Franchises</h2>
+        <span class="section-num">12</span>
+      </div>
+
+      <p>The search box filters the full franchise list in real time. Leave it empty and click Search to see everything. Custom, TMDB-sourced, and imported franchises appear alongside built-in ones.</p>
+
+      <table class="info-table">
+        <thead><tr><th>Search term</th><th>What you'll find</th></tr></thead>
+        <tbody>
+          <tr><td><code>marvel</code></td><td>Marvel Cinematic Universe (33 films)</td></tr>
+          <tr><td><code>bond</code></td><td>James Bond — 25 films from Dr. No to No Time to Die</td></tr>
+          <tr><td><code>star</code></td><td>Star Wars and Star Trek</td></tr>
+          <tr><td><code>horror</code></td><td>Scream, Halloween, Friday the 13th, Nightmare on Elm Street, Saw, Insidious and more</td></tr>
+          <tr><td><code>animation</code> or <code>toy</code></td><td>Toy Story, Shrek, Ice Age, Despicable Me and other animated franchises</td></tr>
+          <tr><td>(empty)</td><td>All 100+ franchises listed alphabetically</td></tr>
+        </tbody>
+      </table>
+
+      <p>Franchise cards show a small coloured badge indicating their source — see the <a href="#source-labels" style="color:var(--accent);">Franchise Source Labels</a> section below for a full explanation of what each badge means.</p>
+    </div>
+
+    <!-- ── SOURCE LABELS ─────────────────────────────────────────────────── -->
+    <div class="section" id="source-labels">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="4" rx="1"/><rect x="3" y="13" width="13" height="4" rx="1"/></svg>
+        </div>
+        <h2>Franchise Source Labels</h2>
+        <span class="section-num">13</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Every franchise in the app is now labelled with its source so you always know where the movie list came from. Labels appear in the franchise manager list, on franchise cards in search results, and in the refresh dropdown.</p>
+
+      <table class="info-table">
+        <thead><tr><th>Label</th><th>Colour</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>built-in</strong></td>
+            <td><span class="tag blue">Purple</span></td>
+            <td>Part of the app's original built-in franchise database — pre-loaded, no action needed</td>
+          </tr>
+          <tr>
+            <td><strong>tmdb</strong></td>
+            <td><span style="display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:2px 7px;background:rgba(1,180,228,.12);color:#01b4e4;border:1px solid rgba(1,180,228,.3);">tmdb</span></td>
+            <td>Fetched from TMDB via the TMDB refresh — contains the latest film list from The Movie Database. These are stored separately from both built-in and custom lists</td>
+          </tr>
+          <tr>
+            <td><strong>custom</strong></td>
+            <td><span class="tag green">Green</span></td>
+            <td>Created by you manually, imported from CSV, or saved as an override of a built-in list — stored in your browser and persists between sessions</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Priority order</h3>
+      <p>When the app looks up a franchise's movie list for playlist creation or refresh, it uses this priority: <strong>TMDB</strong> data first (if in TMDB mode) → <strong>custom</strong> override → <strong>built-in</strong>. In built-in mode, custom overrides always take precedence over the original built-in data.</p>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>TMDB and custom lists are kept separate</strong>
+          Running a TMDB refresh never touches your custom franchise edits, and saving a custom franchise never touches your TMDB data. They live in different storage keys and the label always tells you which one you're looking at.
+        </div>
+      </div>
+
+    <!-- ── MANAGE ────────────────────────────────────────────────────────── -->
+    <div class="section" id="manage">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <h2>Editing Franchise Lists</h2>
+        <span class="section-num">14</span>
+      </div>
+
+      <p>The Manage Franchises panel lets you edit any franchise — built-in or custom. Useful when a new film is released, a title doesn't match your library, or you want to change the watch order.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Find and click a franchise</strong>
+            <p>Type in the filter box to narrow the list, then click a row. It highlights blue and the editor opens below.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Edit the movie list</strong>
+            <p>Use <strong>↑ ↓ arrows</strong> to move films up or down, <strong>✕</strong> to remove one, or <strong>drag and drop</strong> rows to reorder freely.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Add a new movie</strong>
+            <p>Type a title in the input at the bottom and press Enter or click Add. It appears at the end — then drag or arrow it to the right position.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Click Save Changes</strong>
+            <p>Changes to built-in franchises are saved as a custom override — the original data is never destroyed. To restore the original, delete your custom override and the built-in data reappears.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CUSTOM FRANCHISE ───────────────────────────────────────────────── -->
+    <div class="section" id="custom">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <h2>Adding Custom Franchises</h2>
+        <span class="section-num">15</span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Click + New in the Manage Franchises panel</strong>
+            <p>The new franchise form opens inline below the franchise list.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Enter a name and movie list</strong>
+            <p>Give the franchise a unique name. List the films in the exact order you want — one title per line. Titles must match what Emby has in your library (the same matching rules apply).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click Save Franchise</strong>
+            <p>If the name is brand new it's saved immediately and appears in search results marked <span class="tag green">custom</span>. If the name matches an existing built-in or TMDB franchise, a <strong>conflict resolution modal</strong> opens — see the <a href="#conflict" style="color:var(--accent);">Conflict Resolution</a> section below.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Adding many franchises at once?</strong>
+          Use the CSV Import feature instead — much faster for bulk additions.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONFLICT RESOLUTION ──────────────────────────────────────────── -->
+    <div class="section" id="conflict">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <h2>Conflict Resolution — Naming Clashes with Built-in Franchises</h2>
+        <span class="section-num">16</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>When you save a franchise — either manually via the <em>New</em> form or by importing a CSV — and the name matches an existing <strong>built-in</strong> or <strong>tmdb</strong> franchise, the app pauses and shows a conflict resolution modal so you can decide what happens instead of silently overwriting data.</p>
+
+      <h3>The two options</h3>
+      <table class="info-table">
+        <thead><tr><th>Option</th><th>What it does</th><th>When to choose it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Override built-in list</strong></td>
+            <td>Your new version replaces the existing franchise for all future playlist operations. The original built-in data is no longer used. The franchise is labelled <span class="tag green">custom</span>.</td>
+            <td>Your version is more accurate or complete than the built-in one, and you want everything to use it from now on</td>
+          </tr>
+          <tr>
+            <td><strong>Save as custom version</strong></td>
+            <td>Your version is saved under <em>"Franchise Name (Custom)"</em> alongside the original. Both coexist — the built-in keeps its name and your version has the <em>(Custom)</em> suffix. Labelled <span class="tag green">custom</span>.</td>
+            <td>You want to keep the original intact and have a separate variant — e.g. a different watch order preference or regional title set</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Cancelling</h3>
+      <p>If you click <strong>Cancel</strong>, nothing is saved and no data is changed.</p>
+
+      <h3>CSV import with multiple conflicts</h3>
+      <p>When importing a CSV that contains several franchises matching built-in names, a conflict modal is shown for each one in sequence. Franchises with unique names (no conflict) are saved immediately without interruption.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Restore a built-in list you've overridden</strong>
+          Open the Manage Franchises panel, find the franchise, click it to open the editor, and use the <strong>Delete Franchise</strong> button. This removes your custom override and restores the original built-in data.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CSV IMPORT ─────────────────────────────────────────────────────── -->
+    <div class="section" id="csv">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h2>Importing Franchises from CSV</h2>
+        <span class="section-num">17</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>The CSV Import section lets you add or update multiple franchise lists in one go by uploading a spreadsheet file. This is the fastest way to load a large collection of franchises.</p>
+
+      <h3>CSV format</h3>
+      <p>The file must have three columns per row: <strong>Franchise Name</strong>, <strong>Movie Title</strong>, and <strong>Release Year</strong>. One movie per row. A header row is automatically detected and skipped.</p>
+
+      <div class="csv-example">
+        <div class="csv-header">Franchise,Movie Title,Release Year</div>
+        <div class="csv-row">Dune,Dune,2021</div>
+        <div class="csv-row">Dune,Dune: Part Two,2024</div>
+        <div class="csv-row">The Cornetto Trilogy,Shaun of the Dead,2004</div>
+        <div class="csv-row">The Cornetto Trilogy,Hot Fuzz,2007</div>
+        <div class="csv-row">The Cornetto Trilogy,The World's End,2013</div>
+      </div>
+
+      <p>The app sorts each franchise by release year automatically, so the order of rows in the CSV doesn't matter as long as the year column is correct. If you don't have year data, list films in the order you want them — the app will use the row order as-is.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Scroll to the Import Franchises from CSV section</strong>
+            <p>It sits between the Manage Franchises section and the Radarr servers section.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click the upload zone or drag and drop your file</strong>
+            <p>Click anywhere in the dashed box to open a file picker, or drag a CSV file directly onto it. The zone highlights blue when a file is dragged over it.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Resolve any naming conflicts</strong>
+            <p>If any franchise name in your CSV matches an existing built-in franchise, a conflict resolution modal appears for each one — choose to <strong>override</strong> the built-in list or <strong>save a separate custom copy</strong> alongside it. Franchises with unique names are saved immediately without interruption. See <a href="#conflict" style="color:var(--accent);">Conflict Resolution</a> for full details.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Check the confirmation message</strong>
+            <p>A green alert shows how many franchises were imported. They are available immediately in search, the refresh dropdown, and the franchise manager.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>RTF files are handled automatically</strong>
+          If your CSV was exported from a Mac application and saved as RTF, the app strips the RTF formatting codes automatically before parsing.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Imported franchises persist between sessions</strong>
+          All imported franchises are saved to browser local storage alongside your custom ones. They will be there the next time you open the app.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- ── TMDB ─────────────────────────────────────────────────────────── -->
+    <div class="section" id="tmdb">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="11 2 22 9 13 22 11 14 2 13 11 2"/></svg>
+        </div>
+        <h2>TMDB Metadata Enrichment</h2>
+        <span class="section-num">18</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Optional TMDB (The Movie Database) integration keeps your franchise lists current. With an API key configured, the app can fetch up-to-date franchise data so newly released films appear in your watch orders without manual editing.</p>
+
+      <h3>Get a free TMDB API key</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Create a TMDB account</strong>
+            <p>Sign up free at <a href="https://www.themoviedb.org" target="_blank" style="color:#01b4e4;">themoviedb.org</a>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Request an API key</strong>
+            <p>Go to Settings → API in your TMDB account. Request a <strong>v3 API key</strong> (the standard one). Approval is usually instant for personal use.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Paste the key into the app</strong>
+            <p>Scroll to the TMDB section below the Radarr servers, paste your key into the field, and click <strong>Test connection</strong>. A green confirmation appears if the key is valid.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Choose a refresh mode and click Refresh franchises from TMDB</strong>
+            <p>Select <strong>Override built-in list</strong> or <strong>Create separate TMDB copy</strong> from the toggle above the refresh button — see <a href="#tmdb-modes" style="color:#01b4e4;">TMDB Refresh Modes</a> below. Then click the button. The app walks through every built-in franchise with a known TMDB Collection mapping, fetches the latest film list, and saves it. Progress is shown per franchise.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>What gets fetched</h3>
+      <p>The app contains a built-in mapping of 70+ franchise names to their TMDB Collection IDs. When you click Refresh, each one is fetched and the movie list is replaced with current TMDB data, sorted by release date. Newly released films are automatically included (e.g. the next MCU entry when it joins the collection).</p>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Your API key never leaves your network</strong>
+          The key is stored in browser local storage and only sent over HTTPS directly to TMDB's API. The app itself does not transmit it anywhere else.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TMDB REFRESH MODES ────────────────────────────────────────────── -->
+    <div class="section" id="tmdb-modes">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <h2>TMDB Refresh Modes</h2>
+        <span class="section-num">19</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Before running a TMDB refresh, a <strong>When refreshing from TMDB</strong> toggle in the TMDB panel lets you choose what happens to your existing franchise data.</p>
+
+      <h3>Mode 1 — Override built-in list</h3>
+      <p>TMDB data <strong>replaces</strong> the matching built-in franchise. The result is labelled <span style="display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:2px 7px;background:rgba(1,180,228,.12);color:#01b4e4;border:1px solid rgba(1,180,228,.3);">tmdb</span> and takes priority over the built-in list. Both the Create and Refresh playlist source toggles in <em>Built-in / Uploaded</em> mode will then automatically use the TMDB data because it has replaced the original.</p>
+
+      <h3>Mode 2 — Create separate TMDB copy</h3>
+      <p>Built-in lists are left completely untouched. TMDB data is saved as a <strong>parallel entry</strong> named <em>"Franchise Name (TMDB)"</em>. Both versions coexist in the franchise list — the original built-in and the new TMDB copy. To use the TMDB version when creating or refreshing a playlist, select <strong>TMDB Order</strong> in the source toggle, or search for and pick the <em>(TMDB)</em> variant directly.</p>
+
+      <h3>Comparison</h3>
+      <table class="info-table">
+        <thead><tr><th></th><th>Override built-in</th><th>Create separate copy</th></tr></thead>
+        <tbody>
+          <tr><td>Built-in list changed?</td><td>Yes — replaced by TMDB data</td><td>No — untouched</td></tr>
+          <tr><td>New entry created?</td><td>No — same name, new content</td><td>Yes — "Franchise (TMDB)" added</td></tr>
+          <tr><td>Label shown</td><td><span style="font-size:11px;background:rgba(1,180,228,.12);color:#01b4e4;border:1px solid rgba(1,180,228,.3);border-radius:4px;padding:2px 7px;">tmdb</span></td><td><span style="font-size:11px;background:rgba(1,180,228,.12);color:#01b4e4;border:1px solid rgba(1,180,228,.3);border-radius:4px;padding:2px 7px;">tmdb</span></td></tr>
+          <tr><td>Best for</td><td>You always want the latest TMDB data and don't need the original</td><td>You want to compare both versions or switch between them per playlist</td></tr>
+          <tr><td>Custom edits preserved?</td><td>TMDB replaces any existing custom override too</td><td>Custom overrides are unaffected</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>Override mode replaces custom edits too</strong>
+          If you've manually edited a built-in franchise and then run a TMDB refresh in Override mode, the TMDB data replaces your custom edits for that franchise. Export your custom franchises to CSV first if you want a backup, or use Create separate copy mode to keep your edits safe.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Re-running a TMDB refresh</strong>
+          You can run the TMDB refresh as often as you like. In Override mode it simply updates the tmdb-labelled entries with the latest data. In Create copy mode it refreshes the existing <em>(TMDB)</em> entries, or creates them if they don't exist yet.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RADARR SETUP ───────────────────────────────────────────────────── -->
+    <div class="section" id="radarr">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h2>Radarr Setup</h2>
+        <span class="section-num">20</span>
+      </div>
+
+      <p>The app supports up to three Radarr servers. Once configured, missing movie pills become clickable and download requests can be sent directly to Radarr.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Click Add Radarr server</strong>
+            <p>Scroll to the Radarr Servers section at the bottom of the main panel and click the dashed button.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Enter a label, URL and API key</strong>
+            <p>The <strong>label</strong> is how the server is identified when choosing between multiple servers (e.g. <code>4K Radarr</code> or <code>Main Server</code>). The <strong>URL</strong> includes the port, e.g. <code>http://192.168.1.10:7878</code>. The <strong>API key</strong> is in Radarr under Settings → General → Security.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click Test connection</strong>
+            <p>A green status line shows the Radarr version if the connection succeeds. A red line shows if the URL or API key is incorrect.</p>
+          </div>
+        </div>
+      </div>
+
+      <p>Settings are saved to local storage automatically as you type. To remove a server, click the <strong>✕</strong> in the server header. Maximum of three servers.</p>
+    </div>
+
+    <!-- ── AUTO-RECONNECT ─────────────────────────────────────────────────── -->
+    <div class="section" id="reconnect">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <h2>Radarr Auto-Reconnect</h2>
+        <span class="section-num">21</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Once you connect to Emby, the app automatically monitors all configured Radarr servers in the background. No manual action is required.</p>
+
+      <h3>How it works</h3>
+      <p>Every <strong>60 seconds</strong> the app silently pings each Radarr server's status endpoint. The result is reflected immediately in two places:</p>
+
+      <table class="info-table">
+        <thead><tr><th>Where</th><th>What you see</th></tr></thead>
+        <tbody>
+          <tr><td>Radarr section title</td><td><strong>● live</strong> in green when all servers are reachable; <strong>● reconnecting…</strong> in grey when any server is offline</td></tr>
+          <tr><td>Individual server status line</td><td>Green "Connected — Radarr v…" when online; red "Offline — retrying…" when not reachable</td></tr>
+        </tbody>
+      </table>
+
+      <p>When a server that was offline comes back up, the status updates to green on the next 60-second ping automatically — no page reload or manual test needed.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Each ping has an 8-second timeout</strong>
+          A slow or unresponsive Radarr server will time out after 8 seconds and be marked offline, without blocking the rest of the UI or the other server pings.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REQUESTING MISSING ─────────────────────────────────────────────── -->
+    <div class="section" id="requesting">
+      <div class="section-header">
+        <div class="section-icon red">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </div>
+        <h2>Requesting Missing Movies via Radarr</h2>
+        <span class="section-num">22</span>
+        <span class="section-updated">Updated</span>
+      </div>
+
+      <p>After creating a playlist, any franchise film not found in your library appears as a <span class="tag red">red pill</span>. Click it to send a download request to Radarr.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Click a red movie pill</strong>
+            <p>A modal opens. If you have one Radarr server it goes straight to searching. If you have two or three, each is shown by its label name so you can pick where the request goes.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Select a Radarr server (if prompted)</strong>
+            <p>Each option shows the server's configured name and URL. Click the one you want to use.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Confirm the result</strong>
+            <p>The app searches TMDB via Radarr's lookup. An exact match is added automatically. If multiple results are returned, a picker lets you choose the correct film.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Pill turns amber — request sent</strong>
+            <p>The pill shows a tick and the server name. Radarr will search for and download the movie. Once it lands in your library, use <strong>Refresh Playlist</strong> to pull it into the correct position.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>Already in Radarr warning</strong>
+          If the response says the movie already exists, Radarr already knows about it — it may be monitored but not yet downloaded, or downloaded but not yet scanned by Emby. Check Radarr directly for its status.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEND ALL MISSING ───────────────────────────────────────────────── -->
+    <div class="section" id="addall">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h2>Send All Missing to Radarr</h2>
+        <span class="section-num">23</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Instead of clicking each missing movie individually, you can request the entire set of missing films in a single operation. This also works when <em>none</em> of the franchise movies exist in your library yet — so you can kick off a full franchise download with one click.</p>
+
+      <h3>The Send All bar</h3>
+      <p>After creating a playlist, if any movies are missing a bar appears below the movie pills automatically. It contains:</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li>A count of how many movies are missing</li>
+        <li>A dropdown to select which Radarr server to send requests to (showing your configured server names)</li>
+        <li>A <strong>Send All Missing to Radarr</strong> button</li>
+      </ul>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Choose a Radarr server from the dropdown</strong>
+            <p>The dropdown lists your configured servers by their label names. Select the one you want to send all requests to.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click Send All Missing to Radarr</strong>
+            <p>The button shows a spinner and the current film title as it works through the list one by one, looking up each title via TMDB and adding it to Radarr with search enabled.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Review the summary</strong>
+            <p>A message shows how many were sent successfully, how many were already in Radarr, and any titles that could not be looked up. Sent films have their pills turn amber.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Works even with an empty library</strong>
+          If you search for a franchise and none of the movies are in your Emby library at all, all titles appear as red pills and the Send All bar appears. You can request every film before a single one has been downloaded.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- ── TRAKT INTEGRATION ─────────────────────────────────────────────── -->
+    <div class="section" id="trakt">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <h2>Trakt Authentication</h2>
+        <span class="section-num">24</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Connect your Trakt account to import custom watchlists and create collections directly from your favourite Trakt lists.</p>
+
+      <h3>Getting Your Trakt API Credentials</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Visit the Trakt API Settings page</strong>
+            <p>Go to <code>https://trakt.tv/settings/developer</code> and sign in with your Trakt account</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Create a new application</strong>
+            <p>Click "Create New Application" and fill in the details (name: "Emby Chrono Playlist", redirect URI: <code>urn:ietf:wg:oauth:2.0:oob</code>)</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Copy your Client ID and Client Secret</strong>
+            <p>These are displayed in your new app settings. Keep them secure.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Setting Up in the App</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Click Settings (gear icon)</strong>
+            <p>Open the Settings modal and go to the Trakt tab</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Enter your Client ID and Client Secret</strong>
+            <p>Paste the credentials from the Trakt developer page into the input fields</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click "Open Trakt Auth URL"</strong>
+            <p>This opens the Trakt authorization page in a new window. Approve access to allow the app to read your lists.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Copy the PIN and paste it back</strong>
+            <p>Trakt will show you a 4-digit PIN. Paste it in the app's PIN input field and click "Exchange PIN"</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Verify you're logged in</strong>
+            <p>Once successful, your Trakt username appears in the settings panel and a "Logout" button becomes available</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Your Trakt credentials are encrypted and never shared</strong>
+          The access token is stored locally in your browser and never sent anywhere except to Trakt's official API servers over HTTPS.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRAKT LIST IMPORT ─────────────────────────────────────────────── -->
+    <div class="section" id="trakt-lists">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        </div>
+        <h2>Importing Trakt Lists</h2>
+        <span class="section-num">25</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Once authenticated with Trakt, you can import any of your lists and create Emby collections from them automatically.</p>
+
+      <h3>Importing a List</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Click the "Import from Trakt" button</strong>
+            <p>This appears in the main interface when Trakt is authenticated. A panel opens showing your available Trakt lists.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Select a list and click Import</strong>
+            <p>The app loads the list's movie titles and matches them against your Emby library</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Review the matches</strong>
+            <p>A preview shows which movies were found (green pills) and which are missing from your library (red pills)</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Create the collection</strong>
+            <p>Click "Create Collection" to add all matched movies to a new Emby collection with your list's name</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Request missing movies (optional)</strong>
+            <p>If you have Radarr set up, a bar appears offering to send all missing movies to Radarr automatically</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Collections vs Playlists</strong>
+          Trakt imports create Emby <strong>Collections</strong> rather than playlists, which are better for organizing thematic groups while preserving individual movie watch history.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS MODAL ────────────────────────────────────────────────── -->
+    <div class="section" id="settings">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m2.12-2.12l4.24-4.24M19.78 19.78l-4.24-4.24m-2.12-2.12l-4.24-4.24M19.78 4.22l-4.24 4.24m-2.12 2.12L9.08 9.08M23 12h-6m-6 0H5"/></svg>
+        </div>
+        <h2>Settings Modal</h2>
+        <span class="section-num">26</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Click the gear icon (⚙) in the top-right corner to open the Settings modal. It has 5 tabs for managing your app configuration.</p>
+
+      <h3>Radarr Tab</h3>
+      <p>Add and manage Radarr server connections. You can add multiple servers for different purposes (4K, HDR, etc.).</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Add Server:</strong> Click the + button to add a new Radarr instance</li>
+        <li><strong>Server details:</strong> Enter a friendly name, full URL (e.g. <code>http://192.168.1.100:7878</code>) and API key from Radarr Settings → Security</li>
+        <li><strong>Test:</strong> Click to validate the connection before saving</li>
+        <li><strong>Remove:</strong> Click the × button to delete a server</li>
+      </ul>
+
+      <h3>TMDB Tab</h3>
+      <p>Connect to The Movie Database for automatic franchise detection and updates.</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>API Key:</strong> Get a free key from <code>https://www.themoviedb.org/settings/api</code></li>
+        <li><strong>Test:</strong> Validates your key before saving</li>
+        <li><strong>Refresh Franchises:</strong> Downloads the latest franchise data from TMDB into the app</li>
+        <li><strong>Refresh Status:</strong> Shows progress and any failed collections</li>
+      </ul>
+
+      <h3>Network Tab</h3>
+      <p>View a complete list of all external services the app may contact and their purposes.</p>
+      <table class="info-table">
+        <thead><tr><th>Service</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Your Emby Server</td><td>Movie library and playlist management (local network)</td></tr>
+          <tr><td>Your Radarr Server(s)</td><td>Request missing movie downloads (local network)</td></tr>
+          <tr><td>Trakt API</td><td>Authenticate and fetch your watchlists (HTTPS)</td></tr>
+          <tr><td>TMDB API</td><td>Fetch franchise and collection data (HTTPS)</td></tr>
+          <tr><td>Google Fonts</td><td>Typography for the instructions page only (HTTPS)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Server Tab</h3>
+      <p>Manage your Emby connection and app-wide settings.</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Connected Server:</strong> Shows your current Emby server URL and username</li>
+        <li><strong>Disconnect:</strong> Log out of Emby (clears session, keeps settings and custom franchises)</li>
+        <li><strong>Theme:</strong> Switch between Light and Dark modes (your choice is remembered)</li>
+        <li><strong>Export settings:</strong> Download a backup of your playlists and custom franchises</li>
+        <li><strong>Import backup:</strong> Restore from a previously downloaded backup file</li>
+      </ul>
+
+      <h3>Trakt Tab</h3>
+      <p>Manage your Trakt authentication and view your connected account.</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Client ID &amp; Secret:</strong> Your Trakt app credentials from the developer settings page</li>
+        <li><strong>Open Auth URL:</strong> Button to start the Trakt authorization flow</li>
+        <li><strong>PIN Exchange:</strong> Paste the PIN from Trakt and click Exchange to complete authentication</li>
+        <li><strong>Connected as:</strong> Shows your Trakt username when authenticated</li>
+        <li><strong>Logout:</strong> Disconnect your Trakt account (keeps settings, requires re-auth for future imports)</li>
+      </ul>
+    </div>
+
+    <!-- ── BACKUP & RESTORE ──────────────────────────────────────────────── -->
+    <div class="section" id="backup">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        </div>
+        <h2>Backup &amp; Restore</h2>
+        <span class="section-num">27</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Backup all your custom franchises, playlists, and collections to a JSON file, then restore them on another computer or after reinstalling the app.</p>
+
+      <h3>Exporting a Backup</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Open Settings (gear icon)</strong>
+            <p>Click the gear icon in the top-right corner</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Go to Server tab</strong>
+            <p>Click the "Server" tab in the settings modal</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click "Export settings"</strong>
+            <p>A preview shows what will be included (playlists, collections, custom franchises, Radarr servers) and what won't (credentials and API keys for security)</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Click "Download backup"</strong>
+            <p>A file named <code>chrono-backup-YYYY-MM-DD.json</code> is downloaded to your computer</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Restoring from a Backup</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Open Settings and go to Server tab</strong>
+            <p>Same steps as above</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click "Import backup"</strong>
+            <p>A file picker opens. Select your <code>.json</code> backup file</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Review the preview</strong>
+            <p>The modal shows counts of playlists, collections, and franchises that will be restored. Click "Restore backup" to proceed.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Re-enter API keys (important!)</strong>
+            <p>For security, credentials and API keys are not included in backups. You'll need to re-enter your TMDB API key and Radarr API keys in Settings.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>Backup files do not contain credentials</strong>
+          API keys, Emby passwords, and Trakt tokens are never included in exports for security. Save your backup file in a secure location, but understand that it only contains your playlist and franchise data.
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Merge, don't replace</strong>
+          Import merges your backup with existing app data. If you have a franchise named "Star Wars" in both your app and your backup, the backup version overwrites it. All other franchises are preserved.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <hr class="divider"/>
+    <div class="section" id="network">
+      <div class="section-header">
+        <div class="section-icon green">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h2>Network Activity &amp; Privacy</h2>
+        <span class="section-num">28</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>The app runs entirely in your browser. Your Emby credentials and library data stay on your local network. To make this completely transparent, the Network Activity panel at the bottom of the app lists every network call the app may make, tagged as LAN (local, stays on your network) or WAN (external internet).</p>
+
+      <h3>What you'll see in the panel</h3>
+      <table class="info-table">
+        <thead><tr><th>Endpoint</th><th>Tag</th><th>When it's used</th></tr></thead>
+        <tbody>
+          <tr><td>Your Emby Server</td><td><span class="tag green">LAN</span></td><td>Authentication, library scans, all playlist operations. Always local.</td></tr>
+          <tr><td>Your Radarr Server(s)</td><td><span class="tag green">LAN</span></td><td>Only when you click red movie pills or use Send All to request downloads.</td></tr>
+          <tr><td>api.allorigins.win</td><td><span class="tag orange">WAN</span></td><td>Public CORS proxy. Used rarely if needed for fetching watch-order data. Only your IP is visible; no Emby data is sent.</td></tr>
+          <tr><td>api.themoviedb.org</td><td><span class="tag orange">WAN</span></td><td>Only when you click Refresh franchises from TMDB. Sends your TMDB API key over HTTPS; no Emby data is included.</td></tr>
+          <tr><td>fonts.googleapis.com</td><td><span class="tag orange">WAN</span></td><td>Used only by this instructions page (not the main app).</td></tr>
+          <tr><td>Radarr → TMDB</td><td><span class="tag orange">WAN</span></td><td>Happens inside Radarr itself, not from this app. Listed for transparency.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Live activity indicators</h3>
+      <p>Each row in the Network Activity panel has a coloured pulse indicator on the right that lights up in real time when the app actually contacts that endpoint. This lets you visually confirm exactly which connections are happening as you use the app. The pulse fades after roughly a second of inactivity.</p>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Your Emby server URL stays local</strong>
+          The connection to Emby uses whatever URL you typed at login (typically a private LAN address like <code>192.168.x.x</code>). It does not pass through any external service.
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Credentials are never sent anywhere external</strong>
+          Your Emby password, API tokens, and Radarr API keys are only used to authenticate with your local servers. They are never sent to any external service.
+        </div>
+      </div>
+
+      <h3>Disabling WAN access entirely</h3>
+      <p>If you want a fully air-gapped LAN-only experience, simply:</p>
+      <ul style="margin:10px 0 10px 20px;color:var(--text2);font-size:14px;line-height:2;">
+        <li>Don't configure a TMDB API key (skips all TMDB calls)</li>
+        <li>Don't use the CSV import "fetch via proxy" feature (skips allorigins)</li>
+        <li>Block the relevant domains at your firewall for ironclad enforcement</li>
+      </ul>
+      <p>Core features — connect to Emby, create playlists, refresh playlists, manage franchises locally, request downloads via local Radarr — all work without any external connections.</p>
+    </div>
+
+    <!-- ── TITLE MATCHING ─────────────────────────────────────────────────── -->
+    <div class="section" id="matching">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h2>How Title Matching Works</h2>
+        <span class="section-num">29</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>The matching engine compares franchise title list entries against your Emby library. It was completely rewritten to eliminate false positives while still handling common title variations.</p>
+
+      <h3>Matching rules (in order)</h3>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Exact normalised match</strong>
+            <p>Punctuation, case and extra spaces are stripped from both titles and compared character-for-character. This handles the vast majority of matches cleanly — e.g. <em>"Alien: Covenant"</em> matches <em>"Alien Covenant"</em>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Significant word matching with sequel guard</strong>
+            <p>Stop words (the, a, an, of, and…) are removed. Numbers are <strong>kept</strong> — <em>"Scream"</em> and <em>"Scream 2"</em> are treated as different titles because the number is a meaningful distinguishing word.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>The library entry must not have more words than the franchise title</strong>
+            <p>This is the key rule that prevents false positives. <em>"Star Trek"</em> (2 words) will never match <em>"Star Trek Into Darkness"</em> (4 words). <em>"John Wick"</em> (2 words) will never match <em>"John Wick: Chapter 2"</em> (3 words). A short title cannot match a longer one.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Examples</h3>
+      <table class="info-table">
+        <thead><tr><th>Franchise title</th><th>Library title</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Aliens</td><td>Aliens</td><td><span class="tag green">✓ Match</span> — exact</td></tr>
+          <tr><td>Alien: Covenant</td><td>Alien Covenant</td><td><span class="tag green">✓ Match</span> — punctuation stripped</td></tr>
+          <tr><td>Alien</td><td>Aliens</td><td><span class="tag red">✗ No match</span> — "aliens" has more words</td></tr>
+          <tr><td>Scream 2</td><td>Scream 2</td><td><span class="tag green">✓ Match</span> — exact with number</td></tr>
+          <tr><td>Scream</td><td>Scream 2</td><td><span class="tag red">✗ No match</span> — sequel guard</td></tr>
+          <tr><td>Star Trek</td><td>Star Trek Into Darkness</td><td><span class="tag red">✗ No match</span> — library title has more words</td></tr>
+          <tr><td>RV</td><td>Marvel</td><td><span class="tag red">✗ No match</span> — "rv" is one word under 5 chars, exact only</td></tr>
+          <tr><td>Doctor Strange</td><td>Doctor Strange in the Multiverse of Madness</td><td><span class="tag red">✗ No match</span> — library title has more sig. words</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What to do if a film still doesn't match</h3>
+      <table class="info-table">
+        <thead><tr><th>Issue</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Regional title variant</td><td>Edit the franchise list entry to use the title Emby shows — e.g. <em>Philosopher's Stone</em> vs <em>Sorcerer's Stone</em></td></tr>
+          <tr><td>Different subtitle</td><td>Update the franchise list or correct the Emby metadata to match</td></tr>
+          <tr><td>Film not yet scanned</td><td>Run a library scan in Emby Dashboard first, then refresh the playlist</td></tr>
+          <tr><td>Year disambiguation</td><td>Emby may store a 2022 remake differently from a 1994 original — check both versions in your library</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── FRANCHISE LIST ─────────────────────────────────────────────────── -->
+    <div class="section" id="franchises">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h7"/></svg>
+        </div>
+        <h2>Built-in Franchise List</h2>
+        <span class="section-num">30</span>
+      </div>
+
+      <p>The following 100 franchises are built into the app, sorted chronologically by release year.</p>
+
+      <table class="info-table">
+        <thead><tr><th>Category</th><th>Franchises</th></tr></thead>
+        <tbody>
+          <tr><td>Superhero</td><td>Marvel Cinematic Universe, DC Extended Universe, X-Men, Batman, Superman, Spider-Man, Spider-Verse, Deadpool, Guardians of the Galaxy, Avengers, Fantastic Four, Hellboy, Blade, Kick-Ass, The Incredibles</td></tr>
+          <tr><td>Sci-Fi / Space</td><td>Star Wars, Star Trek, Avatar, The Matrix, Alien, Predator, MonsterVerse, Terminator, Transformers, Planet of the Apes</td></tr>
+          <tr><td>Fantasy / Magic</td><td>Wizarding World (Harry Potter + Fantastic Beasts), Middle-earth (Lord of the Rings + Hobbit), The Chronicles of Narnia</td></tr>
+          <tr><td>Action / Spy</td><td>James Bond, Mission: Impossible, John Wick, Jason Bourne, Die Hard, Lethal Weapon, Kingsman, The Equalizer, Jack Reacher, Bad Boys, Taken, Rush Hour, The Expendables, Sicario</td></tr>
+          <tr><td>Adventure</td><td>Indiana Jones, Pirates of the Caribbean, Jurassic Park, Fast &amp; Furious, The Hunger Games, Mad Max, National Treasure</td></tr>
+          <tr><td>Horror</td><td>Halloween, A Nightmare on Elm Street, Friday the 13th, Scream, Saw, A Quiet Place, Insidious, The Purge, Paranormal Activity, Resident Evil, It, Final Destination, The Conjuring Universe</td></tr>
+          <tr><td>Animation</td><td>Despicable Me / Minions, Shrek, Toy Story, Ice Age, Frozen, Kung Fu Panda, Madagascar, How to Train Your Dragon, Cars, Finding Nemo, Monsters Inc, The Lion King, Spider-Verse, Hotel Transylvania, The Lego Movie, Sing, The Secret Life of Pets</td></tr>
+          <tr><td>Family / Comedy</td><td>Home Alone, Paddington, Sonic the Hedgehog, Jumanji, Back to the Future, Ghostbusters, Teenage Mutant Ninja Turtles, The Hangover, American Pie, Austin Powers</td></tr>
+          <tr><td>Drama / Crime</td><td>The Godfather, Ocean's, Rocky / Creed, Rambo</td></tr>
+          <tr><td>Young Adult</td><td>The Twilight Saga, The Hunger Games, Divergent, Maze Runner, Percy Jackson</td></tr>
+          <tr><td>Other</td><td>The Mummy, Men in Black, Underworld, Avatar</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── TIPS ───────────────────────────────────────────────────────────── -->
+    <div class="section" id="tips">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2>Tips &amp; Troubleshooting</h2>
+        <span class="section-num">31</span>
+      </div>
+
+      <h3>Connection failed on login</h3>
+      <table class="info-table">
+        <thead><tr><th>Error</th><th>Likely cause</th></tr></thead>
+        <tbody>
+          <tr><td>HTTP 401</td><td>Wrong username or password</td></tr>
+          <tr><td>HTTP 404</td><td>Server URL is wrong or the path is incorrect</td></tr>
+          <tr><td>Failed to fetch / Network error</td><td>CORS issue — see Requirements section for the fix</td></tr>
+          <tr><td>No response</td><td>Emby server not running, or firewall blocking the port</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Radarr test connection fails</h3>
+      <p>Check the URL includes the port (default <code>7878</code>), the API key was copied in full from Radarr Settings → General → Security, and nothing on your network blocks the connection.</p>
+
+      <h3>The playlist isn't reordering correctly</h3>
+      <p>Each move is sent to Emby one at a time. For large playlists (50+ items) this takes a moment. Wait for the progress bar to reach 100% before checking in Emby. You may also need to refresh the Emby client to see the updated order.</p>
+
+      <h3>Data lost after closing the browser</h3>
+      <p>All settings, Radarr servers and custom/imported franchises are stored in browser local storage tied to the URL you use to open the file. Use the file from a consistent location each time.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Bookmark the file for reliable persistence</strong>
+          Serve it with <code>python3 -m http.server 8080</code> and bookmark <code>http://localhost:8080/emby-chrono-playlist.html</code>. The URL stays constant so all local storage data persists reliably.
+        </div>
+      </div>
+
+      <h3>CSV import shows no franchises found</h3>
+      <p>Check that the file uses commas as delimiters and has at least a Franchise column and a Movie Title column. If your CSV editor uses semicolons, resave with comma delimiters. The app handles RTF files automatically — if you see garbage characters, try saving as plain <code>.csv</code> from your spreadsheet app instead.</p>
+
+      <h3>TMDB refresh updates nothing</h3>
+      <p>Make sure your TMDB API key is entered and the Test connection button shows a green success message first. If a franchise shows as "failed" in the status, it usually means the TMDB collection ID has changed — this is rare but can happen when TMDB reorganises its data.</p>
+
+      <h3>I chose the wrong option in the conflict modal</h3>
+      <p>If you overrode a built-in list by mistake, open the Manage Franchises panel, click the franchise, and use the <strong>Delete Franchise</strong> button to remove your custom override. The original built-in data will reappear. If you saved a custom copy under the wrong name, delete it and re-import or re-add it.</p>
+
+      <h3>TMDB Order toggle shows a warning</h3>
+      <p>The warning <em>"No TMDB data found"</em> means you haven't run a TMDB refresh yet, or the selected franchise doesn't have a TMDB Collection mapping in the app. Run a TMDB refresh first, or switch back to <strong>Built-in / Uploaded</strong> mode.</p>
+
+    </div>
+
+    <!-- ── JELLYFIN / PLEX COMPATIBILITY ─────────────────────────────────── -->
+    <div class="section" id="jellyfin">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 15h5"/></svg>
+        </div>
+        <h2>Jellyfin &amp; Plex Compatibility</h2>
+        <span class="section-num">32</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>This app is purpose-built for <strong>Emby</strong> and uses Emby-specific APIs. Here's what to know if you're interested in using it with other media servers:</p>
+
+      <h3>Jellyfin</h3>
+      <p><strong>Jellyfin is Emby's open-source fork.</strong> Its API is nearly identical to Emby's, so compatibility is very high. Many Jellyfin users have successfully adapted this app:</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Server URL:</strong> Works the same as Emby (default port 8096)</li>
+        <li><strong>Playlists:</strong> Full compatibility — Jellyfin playlists use the same endpoint</li>
+        <li><strong>Collections:</strong> Full compatibility — BoxSets API is identical</li>
+        <li><strong>Libraries:</strong> Compatible, though library structure may differ slightly</li>
+        <li><strong>Known differences:</strong> Some metadata fields may not exist or have different values; Jellyfin's user permissions system works slightly differently</li>
+      </ul>
+      <div class="callout note">
+        <div class="callout-icon">ℹ️</div>
+        <div class="callout-body">
+          <strong>Jellyfin is likely to work with minimal or no changes</strong>. Try it — most features should work out of the box. If you encounter errors, check that your Jellyfin API endpoint matches the app's expectations.
+        </div>
+      </div>
+
+      <h3>Plex</h3>
+      <p><strong>Plex is fundamentally different from Emby and Jellyfin.</strong> Its API uses a completely different architecture, authentication method, and data structures. This app is <strong>not compatible with Plex</strong> without significant rewrites:</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Authentication:</strong> Plex uses token-based OAuth, Emby uses username/password</li>
+        <li><strong>Endpoints:</strong> Plex uses <code>/library/sections</code>, <code>/playlists</code>, etc. — completely different from Emby's <code>/Items</code> and <code>/Playlists</code></li>
+        <li><strong>Playlists:</strong> Plex playlists have a different structure and creation workflow</li>
+        <li><strong>Collections:</strong> Plex doesn't have a direct equivalent to Emby's BoxSets</li>
+        <li><strong>Library scanning:</strong> Plex doesn't expose real-time library access the same way Emby does</li>
+      </ul>
+      <div class="callout cors">
+        <div class="callout-icon">❌</div>
+        <div class="callout-body">
+          <strong>Plex would require a complete rewrite</strong>. The app's entire architecture is built around Emby's API patterns. While technically possible, adapting it to Plex would essentially mean building a new app from scratch.
+        </div>
+      </div>
+
+      <h3>Other Media Servers (Kaleidescape, MediaServer, etc.)</h3>
+      <p>Similar to Plex — each media server has its own proprietary API and architecture. This app cannot be adapted to work with them without substantial changes to the codebase.</p>
+
+      <h3>How to Try on Jellyfin</h3>
+      <p>If you have a Jellyfin server, try the app as-is:</p>
+      <ol style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li>Open the app and enter your Jellyfin server URL (usually <code>http://192.168.1.x:8096</code>)</li>
+        <li>Use your Jellyfin username and password</li>
+        <li>If login works, the core features should work. Radarr integration will work if configured the same way.</li>
+        <li>If you encounter errors, the <strong>Network Activity</strong> panel (bottom of the app) will show failed requests — note the specific API endpoint that fails.</li>
+      </ol>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Report Jellyfin issues on GitHub</strong>
+          If you're a Jellyfin user and discover bugs or incompatibilities, open an issue with the specific API error messages. Fixes for Jellyfin compatibility may be possible if the differences are minor.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TIPS ───────────────────────────────────────────────────────────── -->
+    <div class="section" id="tips">
+      <div class="section-header">
+        <div class="section-icon orange">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2>Tips &amp; Troubleshooting</h2>
+        <span class="section-num">33</span>
+      </div>
+
+      <h3>Connection failed on login</h3>
+      <table class="info-table">
+        <thead><tr><th>Error</th><th>Likely cause</th></tr></thead>
+        <tbody>
+          <tr><td>HTTP 401</td><td>Wrong username or password</td></tr>
+          <tr><td>HTTP 404</td><td>Server URL is wrong or the path is incorrect</td></tr>
+          <tr><td>Failed to fetch / Network error</td><td>CORS issue — see Requirements section for the fix</td></tr>
+          <tr><td>No response</td><td>Emby server not running, or firewall blocking the port</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Radarr test connection fails</h3>
+      <p>Check the URL includes the port (default <code>7878</code>), the API key was copied in full from Radarr Settings → General → Security, and nothing on your network blocks the connection.</p>
+
+      <h3>The playlist isn't reordering correctly</h3>
+      <p>Each move is sent to Emby one at a time. For large playlists (50+ items) this takes a moment. Wait for the progress bar to reach 100% before checking in Emby. You may also need to refresh the Emby client to see the updated order.</p>
+
+      <h3>Data lost after closing the browser</h3>
+      <p>All settings, Radarr servers and custom/imported franchises are stored in browser local storage tied to the URL you use to open the file. Use the file from a consistent location each time.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Bookmark the file for reliable persistence</strong>
+          Serve it with <code>python3 -m http.server 8080</code> and bookmark <code>http://localhost:8080/emby-chrono-playlist.html</code>. The URL stays constant so all local storage data persists reliably.
+        </div>
+      </div>
+
+      <h3>CSV import shows no franchises found</h3>
+      <p>Check that the file uses commas as delimiters and has at least a Franchise column and a Movie Title column. If your CSV editor uses semicolons, resave with comma delimiters. The app handles RTF files automatically — if you see garbage characters, try saving as plain <code>.csv</code> from your spreadsheet app instead.</p>
+
+      <h3>TMDB refresh updates nothing</h3>
+      <p>Make sure your TMDB API key is entered and the Test connection button shows a green success message first. If a franchise shows as "failed" in the status, it usually means the TMDB collection ID has changed — this is rare but can happen when TMDB reorganises its data.</p>
+
+      <h3>I chose the wrong option in the conflict modal</h3>
+      <p>If you overrode a built-in list by mistake, open the Manage Franchises panel, click the franchise, and use the <strong>Delete Franchise</strong> button to remove your custom override. The original built-in data will reappear. If you saved a custom copy under the wrong name, delete it and re-import or re-add it.</p>
+
+      <h3>TMDB Order toggle shows a warning</h3>
+      <p>The warning <em>"No TMDB data found"</em> means you haven't run a TMDB refresh yet, or the selected franchise doesn't have a TMDB Collection mapping in the app. Run a TMDB refresh first, or switch back to <strong>Built-in / Uploaded</strong> mode.</p>
+
+  </main>
+</div>
+
+<script>
+var sections = document.querySelectorAll('.section');
+var links = document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll', function(){
+  var scrollY = window.scrollY + 80;
+  var current = '';
+  sections.forEach(function(s){ if(s.offsetTop <= scrollY) current = s.id; });
+  links.forEach(function(l){
+    l.classList.toggle('active', l.getAttribute('href') === '#'+current);
+  });
+});
+</script>
+</body>
+</html>
