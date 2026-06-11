@@ -89,13 +89,12 @@ The app is a **single HTML file** with all code, styles, and logic embedded:
 We're especially looking for help with:
 
 #### 🔧 Bug Fixes
-- Jellyfin API edge cases or compatibility issues
 - CORS or network-related bugs
 - Title matching edge cases
 - UI/UX issues
+- Emby/Jellyfin API compatibility issues
 
 #### ✨ Features
-- **Jellyfin-specific enhancements** — Make it native to Jellyfin
 - **Additional franchises** — More TV series, anime, etc.
 - **Mobile UI** — Better touch/tablet support
 - **Keyboard shortcuts** — Power user features
@@ -110,7 +109,6 @@ We're especially looking for help with:
 - Add more examples
 
 #### 🤔 Exploration (Lower Priority)
-- Plex compatibility layer
 - Kaleidescape integration
 - Other media server APIs
 - Automated refresh scheduling
