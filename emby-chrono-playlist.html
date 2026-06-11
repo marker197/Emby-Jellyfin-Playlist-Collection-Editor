@@ -986,6 +986,10 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         TMDB
       </button>
+      <button class="settings-tab" onclick="showSettingsTab('mdblist')" id="stab-mdblist">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        MDBlists
+      </button>
       <button class="settings-tab" onclick="showSettingsTab('trakt')" id="stab-trakt">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
         Trakt
@@ -1055,6 +1059,70 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh franchises from TMDB
       </button>
+    </div>
+
+    <!-- MDBLIST PANE -->
+    <div class="settings-pane" id="spane-mdblist">
+      <div class="settings-section-title">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span style="color:#01b4e4;">MDBlists</span> — Device Code OAuth
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+        Connect your MDBlists account to import your personal lists as Emby collections.
+      </p>
+
+      <!-- Setup Block -->
+      <div id="mdblistSetupBlock">
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);">Client ID</label>
+        <input type="text" id="mdblistClientId" placeholder="Enter your MDBlists Client ID" style="width:100%;padding:8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);margin-bottom:10px;"/>
+        <button onclick="startMdblistPKCE()" style="width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Authenticate with MDBlists</button>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px;">Get Client ID from: <code style="background:var(--surface2);padding:2px 4px;border-radius:3px;">mdblist.com/developer</code></p>
+      </div>
+
+      <!-- Auth in Progress -->
+      <div id="mdblistAuthBlock" style="display:none;background:var(--surface2);border:1px solid var(--warn);border-radius:6px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;color:var(--warn);margin-bottom:8px;">⏳ Authorization window opened...</div>
+        <p style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6;">
+          <strong>After you approve in the browser:</strong>
+        </p>
+        <ol style="font-size:11px;color:var(--text2);margin-bottom:10px;margin-left:18px;line-height:1.8;">
+          <li>Firefox will show "Can't connect to localhost:9999" — this is normal</li>
+          <li>Look at the URL bar (it shows: <code style="background:var(--surface3);padding:2px 4px;border-radius:3px;">http://localhost:9999/callback?code=...</code>)</li>
+          <li>Copy the <strong>code</strong> value from the URL</li>
+          <li>Paste it below and click "Exchange Code"</li>
+        </ol>
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);">Authorization Code</label>
+        <input type="text" id="mdblistAuthCode" placeholder="Paste the authorization code here" style="width:100%;padding:8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);margin-bottom:10px;"/>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button onclick="exchangeMdblistCode()" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Exchange Code</button>
+          <button onclick="cancelMdblistAuth()" style="flex:1;padding:8px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Connected Block -->
+      <div id="mdblistConnectedBlock" style="display:none;">
+        <div style="background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.3);border-radius:6px;padding:12px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:6px;">✓ Connected to MDBlists</div>
+        </div>
+        
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);">API Key (from mdblist.com/preferences)</label>
+        <input type="password" id="mdblistApiKey" placeholder="Your MDBlists API key" style="width:100%;padding:8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);margin-bottom:10px;"/>
+        
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);">Username</label>
+        <input type="text" id="mdblistUsername" placeholder="Your username" style="width:100%;padding:8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);margin-bottom:10px;"/>
+        
+        <button onclick="autoFetchMdblistLists()" style="width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:10px;">Load My Lists</button>
+
+        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);margin-top:10px;">Your Lists</label>
+        <select id="mdblistListSelect" style="width:100%;padding:8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);margin-bottom:10px;">
+          <option value="">-- Load lists above first --</option>
+        </select>
+        <button onclick="autoFetchListItems()" style="width:100%;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:10px;">Import Selected List</button>
+        
+        <button onclick="disconnectMdblist()" style="width:100%;padding:8px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Disconnect</button>
+      </div>
+
+      <div id="mdblistStatus" style="margin-top:10px;font-size:12px;color:var(--text2);"></div>
     </div>
 
     <!-- TRAKT PANE -->
@@ -1408,10 +1476,30 @@ function openSettings(){
   // Populate server info pane
   var info = el('settingsServerInfo');
   if(info && S.serverUrl){
-    info.innerHTML = '<strong style="color:var(--text);">'+esc(S.serverUrl)+'</strong><br>'
-      + '<span style="font-size:12px;">User: '+esc(S.users.find(function(u){return u.Id===S.userId;})||{Name:'—'}).Name+'</span>';
+    var user = S.users.find(function(u){return u.Id===S.userId;});
+    var userName = user ? user.Name : '—';
+    var profileImg = user && user.PrimaryImageTag ? S.serverUrl+'/Users/'+user.Id+'/Images/Primary?tag='+user.PrimaryImageTag+(S.token?'&X-MediaBrowser-Token='+encodeURIComponent(S.token):'') : null;
+    
+    var html = '<strong style="color:var(--text);">'+esc(S.serverUrl)+'</strong><br>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
+    
+    if(profileImg){
+      html += '<img id="serverProfileImg" src="'+esc(profileImg)+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--border);" onerror="this.style.display=\'none\'; document.getElementById(\'serverProfilePlaceholder\').style.display=\'inline-flex\';">';
+      html += '<div id="serverProfilePlaceholder" style="display:none;width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:14px;font-weight:600;line-height:1;">'+esc(userName.charAt(0).toUpperCase())+'</div>';
+    } else {
+      html += '<div style="display:inline-flex;width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:14px;font-weight:600;line-height:1;">'+esc(userName.charAt(0).toUpperCase())+'</div>';
+    }
+    
+    html += '<span style="font-size:12px;">User: <strong>'+esc(userName)+'</strong></span></div>';
+    info.innerHTML = html;
   }
   updateThemeButtons(); // Update theme button states
+  // Refresh quality profiles for all configured servers
+  S.radarrServers.forEach(function(srv, idx){
+    if(srv.url && srv.apiKey){
+      refreshRadarrServerQuality(idx);
+    }
+  });
   el('settingsModal').classList.add('open');
 }
 function closeSettings(){ el('settingsModal').classList.remove('open'); }
@@ -2866,12 +2954,72 @@ function renderRadarrServers(){
       '</div>'+
       '<div class="field"><label>API Key</label><input type="text" placeholder="Settings → General → API Key" value="'+esc(srv.apiKey||'')+'" oninput="updateRadarr('+idx+',\'apiKey\',this.value)"/></div>'+
       '<button class="btn btn-radarr btn-sm" onclick="testRadarr('+idx+')">Test connection</button>'+
+      '<div style="display:flex;gap:8px;margin-top:10px;align-items:flex-start;">'+
+        '<div class="field" style="flex:1;margin:0;"><label style="font-size:11px;">Default Quality Profile</label><select id="radarr-quality-'+idx+'" class="cp-sel" style="font-size:12px;width:100%;padding:6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);" onchange="saveRadarrServerQualityProfile('+idx+')"><option value="">-- Select profile --</option></select></div>'+
+        '<button class="btn btn-secondary btn-sm" onclick="refreshRadarrServerQuality('+idx+')" style="white-space:nowrap;padding:6px 10px;font-size:11px;margin-top:21px;">Refresh</button>'+
+      '</div>'+
+      '<div class="radarr-quality-status" id="radarr-quality-status-'+idx+'" style="font-size:10px;color:var(--text3);margin-top:4px;"></div>'+
       '<div class="radarr-status" id="radarr-status-'+idx+'"></div>';
     container.appendChild(div);
   });
   var addBtn=el('radarrAddBtn');
   if(addBtn)addBtn.style.display=S.radarrServers.length>=3?'none':'flex';
 }
+
+async function refreshRadarrServerQuality(idx){
+  var srv=S.radarrServers[idx];
+  if(!srv||!srv.url||!srv.apiKey){
+    el('radarr-quality-status-'+idx).textContent='✗ Configure server first';
+    return;
+  }
+  
+  try{
+    el('radarr-quality-status-'+idx).textContent='⏳ Fetching...';
+    pingNet('radarr');
+    var base=srv.url.replace(/\/$/,'');
+    var response=await fetch(base+'/api/v3/qualityprofile',{headers:{'X-Api-Key':srv.apiKey}});
+    
+    if(!response.ok){
+      el('radarr-quality-status-'+idx).textContent='✗ Could not fetch';
+      return;
+    }
+    
+    var profiles=await response.json();
+    var select=el('radarr-quality-'+idx);
+    select.innerHTML='<option value="">-- Select profile --</option>';
+    
+    profiles.forEach(function(p){
+      var opt=document.createElement('option');
+      opt.value=p.id;
+      opt.textContent=p.name;
+      select.appendChild(opt);
+    });
+    
+    // Restore saved preference
+    var saved=localStorage.getItem('cp_radarr_quality_'+idx);
+    if(saved) select.value=saved;
+    
+    el('radarr-quality-status-'+idx).textContent='✓ '+profiles.length+' profiles';
+    console.log('Radarr '+idx+' quality profiles loaded:', profiles);
+  }catch(e){
+    console.error('Error fetching profiles:', e);
+    el('radarr-quality-status-'+idx).textContent='✗ Error';
+  }
+}
+
+function saveRadarrServerQualityProfile(idx){
+  var qualityId=el('radarr-quality-'+idx).value;
+  if(qualityId){
+    localStorage.setItem('cp_radarr_quality_'+idx, qualityId);
+    console.log('Saved quality profile for server '+idx+':', qualityId);
+  }
+}
+
+function getRadarrQualityProfile(idx){
+  var saved=localStorage.getItem('cp_radarr_quality_'+idx);
+  return saved ? parseInt(saved) : 1;
+}
+
 async function addRadarrServer(){if(S.radarrServers.length>=3)return;S.radarrServers.push({name:'',url:'',apiKey:''});await saveRadarr();renderRadarrServers();renderNetworkList();}
 async function removeRadarrServer(idx){S.radarrServers.splice(idx,1);await saveRadarr();renderRadarrServers();renderNetworkList();}
 async function updateRadarr(idx,key,val){if(S.radarrServers[idx])S.radarrServers[idx][key]=val.trim();await saveRadarr();renderNetworkList();}
@@ -3180,6 +3328,113 @@ function showAddAllBar(missingTitles){
   el('addAllLabel').textContent=_allMissingTitles.length+' movie'+(_allMissingTitles.length>1?'s are':' is')+' missing from your library.';
   el('addAllBar').style.display='block';
   hideAlert('addAllAlert');
+}
+
+function showAddAllBarInPreview(missingTitles){
+  _allMissingTitles=missingTitles||[];
+  console.log('showAddAllBarInPreview called with', _allMissingTitles.length, 'titles');
+  
+  if(!_allMissingTitles.length){
+    console.log('No missing titles');
+    el('previewAddAllBar').style.display='none';
+    return;
+  }
+  
+  var servers=S.radarrServers.filter(function(r){return r.url&&r.apiKey;});
+  console.log('Found', servers.length, 'Radarr servers');
+  
+  if(!servers.length){
+    console.log('No Radarr servers configured');
+    el('previewAddAllBar').style.display='none';
+    return;
+  }
+  
+  // Populate server dropdown
+  var sel=el('previewAddAllServerSelect');sel.innerHTML='';
+  servers.forEach(function(srv,i){
+    var o=document.createElement('option');o.value=i;o.textContent=srv.name||'Radarr '+(i+1);sel.appendChild(o);
+  });
+  el('previewAddAllLabel').textContent='Uncheck any movies you don\'t want to send. '+_allMissingTitles.length+' movie'+(_allMissingTitles.length>1?'s are':' is')+' missing from your library.';
+  el('previewAddAllBar').style.display='block';
+  console.log('Preview Radarr bar shown');
+  hideAlert('previewAddAllAlert');
+}
+
+function tickAllMissingMovies(){
+  document.querySelectorAll('#previewMissingMovies .missing-movie-check').forEach(function(cb){
+    cb.checked = true;
+  });
+  console.log('All missing movies ticked');
+}
+
+function untickAllMissingMovies(){
+  document.querySelectorAll('#previewMissingMovies .missing-movie-check').forEach(function(cb){
+    cb.checked = false;
+  });
+  console.log('All missing movies unticked');
+}
+
+async function addAllMissingFromPreview(){
+  var servers=S.radarrServers.filter(function(r){return r.url&&r.apiKey;});
+  if(!servers.length){alert('No Radarr server configured.');return;}
+  var selIdx=parseInt(el('previewAddAllServerSelect').value)||0;
+  var srv=servers[selIdx];
+  if(!srv){alert('Select a Radarr server.');return;}
+
+  // Get only selected missing movies
+  var selectedCheckboxes = document.querySelectorAll('#previewMissingMovies .missing-movie-check:checked');
+  var titles = Array.from(selectedCheckboxes).map(function(cb){ return cb.getAttribute('data-title'); });
+  
+  if(!titles.length){
+    showAlert('previewAddAllAlert','No movies selected to send.','warn');
+    return;
+  }
+
+  var btn=document.querySelector('#previewAddAllBar .btn-radarr');
+  if(btn){btn.disabled=true;btn.innerHTML=''+SPIN+' Sending '+titles.length+' movie'+(titles.length!==1?'s':'')+'…';}
+  hideAlert('previewAddAllAlert');
+
+  var base=srv.url.replace(/\/$/,'');
+  var sent=0,failed=[],alreadyHave=[];
+
+  // Get root folder and use this server's quality profile
+  var rootPath='/movies',qualityId=getRadarrQualityProfile(selIdx);
+  try{
+    pingNet('radarr');var rfR=await fetch(base+'/api/v3/rootfolder',{headers:{'X-Api-Key':srv.apiKey}});
+    if(rfR.ok){var rf=await rfR.json();if(rf[0])rootPath=rf[0].path;}
+  }catch(ex){}
+
+  for(var i=0;i<titles.length;i++){
+    var title=titles[i];
+    if(btn) btn.innerHTML=SPIN+' ('+( i+1)+'/'+titles.length+') '+esc(title)+'…';
+    try{
+      var lu=await fetch(base+'/api/v3/movie/lookup?term='+encodeURIComponent(title),{headers:{'X-Api-Key':srv.apiKey}});
+      if(!lu.ok){failed.push(title);continue;}
+      var results=await lu.json();
+      if(!results||!results.length){failed.push(title);continue;}
+      var movie=results[0];
+      var payload={title:movie.title,qualityProfileId:qualityId,titleSlug:movie.titleSlug,images:movie.images||[],tmdbId:movie.tmdbId,year:movie.year,rootFolderPath:rootPath,monitored:true,addOptions:{searchForMovie:true}};
+      pingNet('radarr');var addR=await fetch(base+'/api/v3/movie',{method:'POST',headers:{'X-Api-Key':srv.apiKey,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(addR.status===201||addR.status===200){
+        sent++;
+      }else if(addR.status===400){
+        alreadyHave.push(title);
+      }else{
+        failed.push(title);
+      }
+    }catch(ex){failed.push(title);}
+  }
+
+  if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> Send Selected to Radarr';}
+
+  var msg='<b>'+sent+' movie'+(sent!==1?'s':'')+' sent to '+esc(srv.name||'Radarr')+'.</b>';
+  if(alreadyHave.length) msg+='<br>'+alreadyHave.length+' already in Radarr.';
+  if(failed.length) msg+='<br>'+failed.length+' could not be looked up: '+failed.map(esc).join(', ');
+  toast(msg,failed.length?'warn':'ok');
+
+  // Hide Radarr bar and close preview
+  el('previewAddAllBar').style.display='none';
+  closePreviewModal();
 }
 
 async function addAllMissing(){
@@ -3492,6 +3747,9 @@ function renderPreview(){
 
 function closePreviewModal(){
   el('previewModal').classList.remove('open');
+  // Clear missing titles so they don't persist to the next import
+  _allMissingTitles = [];
+  console.log('Preview modal closed, missing titles cleared');
 }
 
 function createFromPreview(){
@@ -3865,8 +4123,21 @@ function showTraktImportPreview(listName, titles){
       allMov.forEach(function(name){ movieHtml+='<span style="display:inline-block;border-radius:5px;padding:3px 9px;font-size:11px;margin:2px 2px 0 0;border:1px solid rgba(52,199,123,.3);color:#8fefc0;background:var(--success-dim);">'+esc(name)+'</span>'; });
     }
     if(missing.length){
-      movieHtml+='<h4 style="font-size:12px;margin:12px 0 8px;color:var(--text2);">Missing from library:</h4>';
-      missing.forEach(function(name){ movieHtml+='<span style="display:inline-block;border-radius:5px;padding:3px 9px;font-size:11px;margin:2px 2px 0 0;border:1px solid rgba(255,92,92,.3);color:#ffaaaa;background:var(--danger-dim);">'+esc(name)+'</span>'; });
+      movieHtml+='<h4 style="font-size:12px;margin:12px 0 8px;color:var(--text2);display:flex;justify-content:space-between;align-items:center;">'
+        +'<span>Missing from library:</span>'
+        +'<div style="display:flex;gap:6px;">'
+        +'<button onclick="tickAllMissingMovies()" style="padding:3px 8px;font-size:10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;">Tick all</button>'
+        +'<button onclick="untickAllMissingMovies()" style="padding:3px 8px;font-size:10px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Untick all</button>'
+        +'</div>'
+        +'</h4>';
+      movieHtml+='<div id="previewMissingMovies" style="display:flex;flex-wrap:wrap;gap:8px;">';
+      missing.forEach(function(name, idx){ 
+        movieHtml+='<label style="display:flex;align-items:center;gap:6px;background:var(--danger-dim);border:1px solid rgba(255,92,92,.3);border-radius:5px;padding:6px 9px;font-size:11px;cursor:pointer;color:#ffaaaa;">'
+          +'<input type="checkbox" class="missing-movie-check" data-title="'+esc(name)+'" checked style="cursor:pointer;">'
+          +'<span>'+esc(name)+'</span>'
+          +'</label>';
+      });
+      movieHtml+='</div>';
     }
 
     el('previewBody').innerHTML = stats + movieHtml;
@@ -3876,7 +4147,7 @@ function showTraktImportPreview(listName, titles){
       btn.textContent = 'Create Collection';
       btn.onclick = function(){
         createCollectionFromTrakt(listName, matched, missing);
-        el('previewModal').classList.remove('open');
+        // Don't close modal here - let createCollectionFromTrakt manage it
       };
     }
     closeSettings();
@@ -3885,28 +4156,765 @@ function showTraktImportPreview(listName, titles){
 }
 
 async function createCollectionFromTrakt(name, movieIds, missingTitles){
-  if(!movieIds.length){ toast('No movies to add to collection.','warn'); return; }
   try{
     console.log('Creating collection:', {name: name, ItemIds: movieIds});
     console.log('ItemIds details:', movieIds.map(function(id, idx){return {idx: idx, id: id, type: typeof id};}));
-    pingNet('emby');
+    console.log('Missing titles:', missingTitles);
     
-    // Use query string format like Playlists, not body
-    var qs = 'Name='+encodeURIComponent(name)+'&Ids='+movieIds.join(',')+'&UserId='+encodeURIComponent(S.userId);
-    console.log('Sending query string:', qs);
+    // If there are matched movies, create the collection
+    if(movieIds.length){
+      pingNet('emby');
+      var qs = 'Name='+encodeURIComponent(name)+'&Ids='+movieIds.join(',')+'&UserId='+encodeURIComponent(S.userId);
+      console.log('Sending query string:', qs);
+      await apiPost('/Collections?'+qs, null);
+      toast('Collection <b>'+esc(name)+'</b> created with '+movieIds.length+' movies.','ok');
+    }else{
+      console.log('No matched movies - skipping collection creation');
+    }
     
-    await apiPost('/Collections?'+qs, null);
-    toast('Collection <b>'+esc(name)+'</b> created with '+movieIds.length+' movies.','ok');
-    // Show Radarr bar if there are missing movies
-    if(missingTitles && missingTitles.length) showAddAllBar(missingTitles);
-    closeTraktLists();
+    // Show Radarr bar in preview modal if there are missing movies
+    if(missingTitles && missingTitles.length){
+      console.log('Showing Radarr bar in preview modal with', missingTitles.length, 'missing titles');
+      showAddAllBarInPreview(missingTitles);
+    }else{
+      console.log('No missing titles');
+      closePreviewModal();
+    }
   }catch(e){
     console.log('Collection creation failed:', e);
     toast('Failed to create collection: '+e.message,'err');
+    closePreviewModal();
   }
 }
 
-// Maps common franchise names to TMDB Collection IDs
+/* ── MDBlists Public PKCE OAuth ── */
+var S_mdblist = {
+  accessToken: null,
+  username: null,
+  clientId: null,
+  codeVerifier: null,
+  state: null
+};
+
+// PKCE helper functions
+function generateRandomString(length) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  var result = '';
+  for(var i = 0; i < length; i++){
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+async function sha256(message) {
+  var msgBuffer = new TextEncoder().encode(message);
+  var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  var hashArray = Array.from(new Uint8Array(hashBuffer));
+  var hashHex = hashArray.map(function(b) { return ('00' + b.toString(16)).slice(-2); }).join('');
+  return hashHex;
+}
+
+function base64urlEncode(arrayBuffer) {
+  // If input is a hex string (from sha256), convert to bytes first
+  if(typeof arrayBuffer === 'string'){
+    var bytes = new Uint8Array(arrayBuffer.length / 2);
+    for(var i = 0; i < arrayBuffer.length; i += 2){
+      bytes[i/2] = parseInt(arrayBuffer.substr(i, 2), 16);
+    }
+    arrayBuffer = bytes;
+  }
+  
+  var binary = '';
+  var len = arrayBuffer.byteLength;
+  for(var i = 0; i < len; i++){
+    binary += String.fromCharCode(arrayBuffer[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+async function startMdblistPKCE(){
+  var clientId = (el('mdblistClientId').value || '').trim();
+  if(!clientId){ toast('Enter your Client ID first.','warn'); el('mdblistClientId').focus(); return; }
+  
+  try{
+    console.log('Starting MDBlists PKCE OAuth...');
+    el('mdblistStatus').textContent = 'Generating PKCE parameters...';
+    
+    // Generate PKCE verifier and challenge
+    var codeVerifier = generateRandomString(64);
+    var codeVerifierHash = await sha256(codeVerifier);
+    var codeChallenge = base64urlEncode(codeVerifierHash);
+    var state = generateRandomString(32);
+    
+    S_mdblist.codeVerifier = codeVerifier;
+    S_mdblist.clientId = clientId;
+    S_mdblist.state = state;
+    
+    console.log('PKCE Challenge:', codeChallenge);
+    console.log('State:', state);
+    
+    // Build authorization URL
+    var authUrl = 'https://mdblist.com/oauth/authorize/?'
+      + 'client_id=' + encodeURIComponent(clientId)
+      + '&redirect_uri=' + encodeURIComponent('http://localhost:9999/callback')
+      + '&response_type=code'
+      + '&scope=write'
+      + '&state=' + encodeURIComponent(state)
+      + '&code_challenge=' + encodeURIComponent(codeChallenge)
+      + '&code_challenge_method=S256';
+    
+    console.log('Opening auth URL:', authUrl);
+    window.open(authUrl, '_blank');
+    
+    // Show code input block
+    el('mdblistSetupBlock').style.display = 'none';
+    el('mdblistAuthBlock').style.display = 'block';
+    el('mdblistStatus').textContent = 'Authorization window opened. Approve access and paste your code below.';
+    el('mdblistAuthCode').value = '';
+    el('mdblistAuthCode').focus();
+    
+  }catch(e){
+    console.log('PKCE error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'</span>';
+  }
+}
+
+async function exchangeMdblistCode(){
+  var authCode = (el('mdblistAuthCode').value || '').trim();
+  if(!authCode){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Paste the authorization code above</span>';
+    return;
+  }
+  
+  if(!S_mdblist.codeVerifier || !S_mdblist.clientId){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Session expired. Please start again.</span>';
+    return;
+  }
+  
+  try{
+    console.log('Exchanging authorization code for token...');
+    console.log('Code:', authCode);
+    console.log('Client ID:', S_mdblist.clientId);
+    el('mdblistStatus').textContent = 'Exchanging code for access token...';
+    
+    var response = await fetch('https://api.mdblist.com/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=authorization_code'
+        + '&code=' + encodeURIComponent(authCode)
+        + '&client_id=' + encodeURIComponent(S_mdblist.clientId)
+        + '&redirect_uri=' + encodeURIComponent('http://localhost:9999/callback')
+        + '&code_verifier=' + encodeURIComponent(S_mdblist.codeVerifier)
+    });
+    
+    console.log('Token response status:', response.status);
+    var tokenData = await response.json();
+    console.log('Token response:', tokenData);
+    
+    if(!response.ok){
+      var errMsg = tokenData.error || ('HTTP '+response.status);
+      var errDetail = tokenData.error_description || '';
+      throw new Error(errMsg + (errDetail ? ': '+errDetail : ''));
+    }
+    
+    if(!tokenData.access_token) throw new Error('No access_token in response');
+    
+    S_mdblist.accessToken = tokenData.access_token;
+    console.log('Token received!');
+    console.log('Token value:', S_mdblist.accessToken);
+    
+    // Store token expiration time
+    var expiresIn = tokenData.expires_in || 2592000; // Default to 30 days
+    var expiresAt = Date.now() + (expiresIn * 1000);
+    console.log('Token expires in', expiresIn, 'seconds at', new Date(expiresAt));
+    
+    // Show connected block (user will enter username next)
+    el('mdblistAuthBlock').style.display = 'none';
+    el('mdblistConnectedBlock').style.display = 'block';
+    el('mdblistStatus').textContent = '✓ Connected! Now enter your username and load lists.';
+    el('mdblistUsername').focus();
+    
+    // Store encrypted token, client ID, API key, username, and expiration time
+    try{
+      console.log('Starting token encryption and storage...');
+      
+      // Try to encrypt, but fall back to plain storage if encryptData not available
+      if(typeof encryptData !== 'undefined'){
+        var encrypted = await encryptData(S_mdblist.accessToken);
+        console.log('Encrypted result:', encrypted);
+        localStorage.setItem('cp_mdblist_token', encrypted.data);
+        localStorage.setItem('cp_mdblist_salt', encrypted.salt);
+      }else{
+        console.log('⚠ encryptData not available, storing token without encryption');
+        localStorage.setItem('cp_mdblist_token', S_mdblist.accessToken);
+      }
+      
+      localStorage.setItem('cp_mdblist_token_expires', expiresAt.toString());
+      
+      console.log('✓ Token stored');
+      console.log('Verify stored:', {
+        token: localStorage.getItem('cp_mdblist_token') ? 'YES' : 'NO',
+        expires: localStorage.getItem('cp_mdblist_token_expires')
+      });
+      
+      // Store other credentials - try encrypted but fall back to plain text
+      if(typeof encryptData !== 'undefined'){
+        localStorage.setItem('cp_mdblist_client_id', JSON.stringify(await encryptData(S_mdblist.clientId)));
+      }else{
+        localStorage.setItem('cp_mdblist_client_id', S_mdblist.clientId);
+        console.log('⚠ Client ID stored without encryption');
+      }
+      
+      var apiKey = (el('mdblistApiKey').value || '').trim();
+      if(apiKey){
+        if(typeof encryptData !== 'undefined'){
+          var encApiKey = await encryptData(apiKey);
+          localStorage.setItem('cp_mdblist_apikey', JSON.stringify(encApiKey));
+        }else{
+          localStorage.setItem('cp_mdblist_apikey', apiKey);
+          console.log('⚠ API key stored without encryption');
+        }
+        console.log('✓ API key stored');
+      }
+      
+      var username = (el('mdblistUsername').value || '').trim();
+      if(username){
+        if(typeof encryptData !== 'undefined'){
+          var encUsername = await encryptData(username);
+          localStorage.setItem('cp_mdblist_username', JSON.stringify(encUsername));
+        }else{
+          localStorage.setItem('cp_mdblist_username', username);
+          console.log('⚠ Username stored without encryption');
+        }
+        console.log('✓ Username stored');
+      }
+    }catch(e){
+      console.error('✗ Storage error:', e);
+    }
+    
+  }catch(e){
+    console.log('Token exchange error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'<br><small style="color:var(--text3);">Code may have expired. Try again with a fresh code.</small></span>';
+  }
+}
+
+async function autoFetchMdblistLists(){
+  var apiKey = (el('mdblistApiKey').value || '').trim();
+  var username = (el('mdblistUsername').value || '').trim();
+  
+  if(!apiKey){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Enter your API key first</span>';
+    return;
+  }
+  if(!username){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Enter your username first</span>';
+    return;
+  }
+  
+  try{
+    el('mdblistStatus').textContent = '⏳ Loading lists...';
+    console.log('Fetching lists via curl server...');
+    
+    // Build curl command
+    var curlCmd = "curl -s -X 'GET' 'https://api.mdblist.com/lists/user/"+username+"?sort=created&apikey="+apiKey+"' -H 'accept: application/json'";
+    
+    // Send to local curl server
+    var response = await fetch('http://localhost:3000?cmd=' + encodeURIComponent(curlCmd));
+    
+    if(!response.ok){
+      throw new Error('Server error: '+response.status);
+    }
+    
+    var lists = await response.json();
+    console.log('✓ Lists fetched:', lists);
+    
+    // Populate dropdown
+    var select = el('mdblistListSelect');
+    select.innerHTML = '<option value="">-- Select a list --</option>';
+    
+    var listArray = Array.isArray(lists) ? lists : [];
+    listArray.forEach(function(list){
+      var opt = document.createElement('option');
+      opt.value = list.id;
+      var itemCount = list.items || 0;
+      opt.textContent = (list.name || list.id) + (itemCount ? ' ('+itemCount+' items)' : '');
+      select.appendChild(opt);
+    });
+    
+    console.log('Loaded '+listArray.length+' lists');
+    el('mdblistStatus').textContent = '✓ Loaded '+listArray.length+' lists';
+    
+  }catch(e){
+    console.error('Error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'<br><small style="color:var(--text2);">Make sure the curl server is running: <code style="background:var(--surface2);padding:2px 4px;border-radius:2px;">node mdblist-curl-server.js</code></small></span>';
+  }
+}
+
+async function autoFetchListItems(){
+  var listId = (el('mdblistListSelect').value || '').trim();
+  var apiKey = (el('mdblistApiKey').value || '').trim();
+  
+  if(!listId || !apiKey){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Select a list first</span>';
+    return;
+  }
+  
+  try{
+    el('mdblistStatus').textContent = '⏳ Loading list items...';
+    console.log('Fetching list items via curl server...');
+    
+    // Build curl command
+    var curlCmd = "curl -s -X 'GET' 'https://api.mdblist.com/lists/"+listId+"/items?apikey="+apiKey+"' -H 'accept: application/json'";
+    
+    // Send to local curl server
+    var response = await fetch('http://localhost:3000?cmd=' + encodeURIComponent(curlCmd));
+    
+    if(!response.ok){
+      throw new Error('Server error: '+response.status);
+    }
+    
+    var data = await response.json();
+    console.log('✓ List items fetched');
+    
+    // Extract titles from MDBlists response format
+    var titles = [];
+    if(Array.isArray(data.movies)){
+      data.movies.forEach(function(movie){
+        if(movie.title) titles.push(movie.title);
+      });
+    }
+    if(Array.isArray(data.shows)){
+      data.shows.forEach(function(show){
+        if(show.title) titles.push(show.title);
+      });
+    }
+    if(Array.isArray(data.episodes)){
+      data.episodes.forEach(function(episode){
+        if(episode.title) titles.push(episode.title);
+      });
+    }
+    
+    console.log('Loaded '+titles.length+' items');
+    
+    if(titles.length === 0){
+      el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">No movies/shows found in this list</span>';
+      return;
+    }
+    
+    // Show preview with Radarr integration
+    closeSettings();
+    showTraktImportPreview('MDBlists: '+el('mdblistListSelect').options[el('mdblistListSelect').selectedIndex].text, titles);
+    
+  }catch(e){
+    console.error('Error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'<br><small style="color:var(--text2);">Make sure the curl server is running: <code style="background:var(--surface2);padding:2px 4px;border-radius:2px;">node mdblist-curl-server.js</code></small></span>';
+  }
+}
+
+function fallbackCopy(text){
+  var textarea = document.createElement('textarea');
+  textarea.value = text;
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+  toast('✓ Copied!','ok');
+}
+
+function parseMdblistJson(){
+  var jsonText = (el('mdblistJsonInput').value || '').trim();
+  if(!jsonText){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Paste JSON data first</span>';
+    return;
+  }
+  
+  try{
+    console.log('Parsing MDBlists JSON...');
+    el('mdblistStatus').textContent = 'Parsing lists...';
+    
+    var lists = JSON.parse(jsonText);
+    console.log('Parsed lists object:', lists);
+    
+    var select = el('mdblistListSelect');
+    select.innerHTML = '<option value="">-- Select a list --</option>';
+    
+    // Handle different response formats
+    var listArray = [];
+    if(Array.isArray(lists)){
+      listArray = lists;
+    }else if(lists && typeof lists === 'object'){
+      listArray = Object.values(lists);
+    }
+    
+    console.log('List array:', listArray);
+    
+    listArray.forEach(function(list, idx){
+      console.log('Processing list '+idx+':', list);
+      var opt = document.createElement('option');
+      var listId = list.id;  // Use ID for items API!
+      opt.value = listId;
+      var itemCount = list.items || list.list_count || list.item_count || '';
+      opt.textContent = (list.name || listId) + (itemCount ? ' ('+itemCount+' items)' : '');
+      console.log('  → id="'+listId+'", display="'+opt.textContent+'"');
+      select.appendChild(opt);
+    });
+    
+    console.log('Loaded '+listArray.length+' lists');
+    el('mdblistStatus').textContent = '✓ Loaded '+listArray.length+' lists from JSON';
+    el('mdblistJsonInput').value = '';
+    
+  }catch(e){
+    console.log('JSON parse error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Invalid JSON: '+e.message+'</span>';
+  }
+}
+
+async function loadMdblistUserLists(){
+  var apiKey = (el('mdblistApiKey').value || '').trim();
+  var username = (el('mdblistUsername').value || '').trim();
+  
+  if(!apiKey){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Enter your API key first</span>';
+    return;
+  }
+  if(!username){
+    el('mdblistStatus').innerHTML = '<span style="color:var(--warn);">Enter your MDBlists username</span>';
+    return;
+  }
+  
+  try{
+    console.log('Loading MDBlists for user:', username);
+    el('mdblistStatus').textContent = 'Loading your lists...';
+    
+    // Fetch user's lists using username and API key
+    var url = 'https://api.mdblist.com/lists/user/'+encodeURIComponent(username)+'?apikey='+encodeURIComponent(apiKey)+'&sort=created';
+    console.log('Fetching:', url);
+    
+    var response = await fetch(url, {
+      headers: { 'Authorization': 'Bearer '+S_mdblist.accessToken }
+    });
+    
+    if(!response.ok) throw new Error('HTTP '+response.status + ' (check username and API key)');
+    var lists = await response.json();
+    
+    var select = el('mdblistListSelect');
+    select.innerHTML = '<option value="">-- Select a list --</option>';
+    
+    // Handle different response formats
+    var listArray = [];
+    if(Array.isArray(lists)){
+      listArray = lists;
+    }else if(lists && typeof lists === 'object'){
+      // If object with list data, extract it
+      listArray = Object.values(lists);
+    }
+    
+    listArray.forEach(function(list){
+      var opt = document.createElement('option');
+      var listName = list.name || list.slug || list.id;
+      opt.value = listName;
+      var itemCount = list.items || list.list_count || list.item_count || '';
+      opt.textContent = listName + (itemCount ? ' ('+itemCount+' items)' : '');
+      select.appendChild(opt);
+    });
+    
+    console.log('Loaded '+listArray.length+' lists for '+username);
+    el('mdblistStatus').textContent = '✓ Loaded '+listArray.length+' lists for '+username;
+    
+  }catch(e){
+    console.log('List load error:', e);
+    el('mdblistStatus').innerHTML = '<span style="color:var(--danger);">Failed to load lists: '+e.message+'</span>';
+  }
+}
+
+function parseAndImportMdblistItems(listName){
+  var itemsJson = (el('mdblistItemsJson').value || '').trim();
+  if(!itemsJson){
+    alert('Paste the JSON first');
+    return;
+  }
+  
+  try{
+    console.log('Parsing list items...');
+    var data = JSON.parse(itemsJson);
+    
+    // Extract titles from MDBlists response format
+    var titles = [];
+    
+    // Handle both direct array and MDBlists API response format
+    if(Array.isArray(data)){
+      // Direct array of items
+      data.forEach(function(item){
+        if(typeof item === 'string') titles.push(item);
+        else if(item && (item.name || item.title)) titles.push(item.name || item.title);
+      });
+    }else if(data && typeof data === 'object'){
+      // MDBlists API response format with movies/shows/episodes
+      if(Array.isArray(data.movies)){
+        data.movies.forEach(function(movie){
+          if(movie.title) titles.push(movie.title);
+        });
+      }
+      if(Array.isArray(data.shows)){
+        data.shows.forEach(function(show){
+          if(show.title) titles.push(show.title);
+        });
+      }
+      if(Array.isArray(data.episodes)){
+        data.episodes.forEach(function(episode){
+          if(episode.title) titles.push(episode.title);
+        });
+      }
+    }
+    
+    console.log('Loaded '+titles.length+' items from '+listName);
+    console.log('Titles:', titles);
+    
+    if(titles.length === 0){
+      alert('No titles found in JSON. Check the format.');
+      return;
+    }
+    
+    // Use existing Trakt preview (reuse all that code!)
+    closeSettings();
+    showTraktImportPreview(listName, titles);
+    
+  }catch(e){
+    console.error('Parse error:', e);
+    alert('Invalid JSON: '+e.message);
+  }
+}
+
+function cancelMdblistAuth(){
+  el('mdblistAuthBlock').style.display = 'none';
+  el('mdblistSetupBlock').style.display = 'block';
+  el('mdblistStatus').textContent = '';
+  el('mdblistAuthCode').value = '';
+  S_mdblist.codeVerifier = null;
+}
+
+function restoreMdblistSettings(){
+  console.log('=== Restoring MDBlists settings ===');
+  try{
+    var savedToken = localStorage.getItem('cp_mdblist_token');
+    var savedSalt = localStorage.getItem('cp_mdblist_salt');
+    var savedTokenExpires = localStorage.getItem('cp_mdblist_token_expires');
+    
+    console.log('Saved token:', savedToken ? 'YES' : 'NO');
+    console.log('Saved salt:', savedSalt ? 'YES' : 'NO');
+    console.log('Saved expires:', savedTokenExpires);
+    
+    // Check if token is still valid
+    if(savedToken && savedTokenExpires){
+      var expiresAt = parseInt(savedTokenExpires);
+      var now = Date.now();
+      var hoursLeft = Math.floor((expiresAt - now) / 1000 / 3600);
+      
+      console.log('Token expiration check: now='+now+', expiresAt='+expiresAt+', hoursLeft='+hoursLeft);
+      
+      if(now < expiresAt){
+        // Token still valid - restore connection
+        console.log('✓ MDBlists token still valid, restoring connection ('+hoursLeft+'h remaining)');
+        
+        // Try to decrypt if salt exists
+        if(savedSalt){
+          decryptData(savedToken, savedSalt).then(function(token){
+            S_mdblist.accessToken = token;
+            console.log('✓ Token decrypted from encrypted storage');
+            
+            // Show connected block
+            el('mdblistAuthBlock').style.display = 'none';
+            el('mdblistConnectedBlock').style.display = 'block';
+            el('mdblistStatus').textContent = '✓ Connected! (token expires in '+hoursLeft+'h)';
+            console.log('✓ Connection UI updated');
+          }).catch(function(err){
+            console.warn('Could not decrypt token, using plain text');
+            S_mdblist.accessToken = savedToken;
+            
+            // Show connected block
+            el('mdblistAuthBlock').style.display = 'none';
+            el('mdblistConnectedBlock').style.display = 'block';
+            el('mdblistStatus').textContent = '✓ Connected! (token expires in '+hoursLeft+'h)';
+          });
+        }else{
+          // Plain text token (fallback)
+          S_mdblist.accessToken = savedToken;
+          console.log('✓ Using plain text token');
+          
+          // Show connected block
+          el('mdblistAuthBlock').style.display = 'none';
+          el('mdblistConnectedBlock').style.display = 'block';
+          el('mdblistStatus').textContent = '✓ Connected! (token expires in '+hoursLeft+'h)';
+        }
+      }else{
+        // Token expired - clear it
+        console.log('✗ MDBlists token expired');
+        localStorage.removeItem('cp_mdblist_token');
+        localStorage.removeItem('cp_mdblist_salt');
+        localStorage.removeItem('cp_mdblist_token_expires');
+      }
+    }else{
+      console.log('No saved token found');
+    }
+    
+    // Restore other credentials
+    var savedClientId = localStorage.getItem('cp_mdblist_client_id');
+    var savedApiKey = localStorage.getItem('cp_mdblist_apikey');
+    var savedUsername = localStorage.getItem('cp_mdblist_username');
+    
+    if(savedClientId){
+      try{
+        var clientIdObj = JSON.parse(savedClientId);
+        if(clientIdObj.data && clientIdObj.salt){
+          decryptData(clientIdObj.data, clientIdObj.salt).then(function(clientId){
+            S_mdblist.clientId = clientId;
+            el('mdblistClientId').value = clientId;
+            console.log('✓ Restored client ID (encrypted)');
+          }).catch(function(err){
+            console.log('Could not decrypt client ID, using plain text');
+            S_mdblist.clientId = savedClientId;
+            el('mdblistClientId').value = savedClientId;
+          });
+        }else{
+          throw new Error('Not encrypted format');
+        }
+      }catch(e){
+        // Plain text client ID
+        S_mdblist.clientId = savedClientId;
+        el('mdblistClientId').value = savedClientId;
+        console.log('✓ Restored client ID (plain text)');
+      }
+    }
+    
+    if(savedApiKey){
+      try{
+        var apiKeyObj = JSON.parse(savedApiKey);
+        if(apiKeyObj.data && apiKeyObj.salt){
+          decryptData(apiKeyObj.data, apiKeyObj.salt).then(function(apiKey){
+            el('mdblistApiKey').value = apiKey;
+            console.log('✓ Restored API key (encrypted)');
+          }).catch(function(err){
+            console.log('Could not decrypt API key, using plain text');
+            el('mdblistApiKey').value = savedApiKey;
+          });
+        }else{
+          throw new Error('Not encrypted format');
+        }
+      }catch(e){
+        // Plain text API key
+        el('mdblistApiKey').value = savedApiKey;
+        console.log('✓ Restored API key (plain text)');
+      }
+    }
+    
+    if(savedUsername){
+      try{
+        var usernameObj = JSON.parse(savedUsername);
+        if(usernameObj.data && usernameObj.salt){
+          decryptData(usernameObj.data, usernameObj.salt).then(function(username){
+            el('mdblistUsername').value = username;
+            console.log('✓ Restored username (encrypted)');
+          }).catch(function(err){
+            console.log('Could not decrypt username, using plain text');
+            el('mdblistUsername').value = savedUsername;
+          });
+        }else{
+          throw new Error('Not encrypted format');
+        }
+      }catch(e){
+        // Plain text username
+        el('mdblistUsername').value = savedUsername;
+        console.log('✓ Restored username (plain text)');
+      }
+    }
+    
+    console.log('=== MDBlists restore complete ===');
+  }catch(e){
+    console.error('Error restoring MDBlists settings:', e);
+  }
+}
+
+// Call on page load to restore settings
+window.addEventListener('load', function(){
+  setTimeout(restoreMdblistSettings, 500);
+  
+  // Add listener to save username when changed
+  setTimeout(function(){
+    var usernameField = el('mdblistUsername');
+    if(usernameField){
+      usernameField.addEventListener('change', function(){
+        var username = this.value.trim();
+        if(username){
+          try{
+            encryptData(username).then(function(encrypted){
+              localStorage.setItem('cp_mdblist_username', JSON.stringify(encrypted));
+              console.log('✓ Saved MDBlists username');
+            });
+          }catch(e){
+            console.log('Error saving username:', e);
+          }
+        }
+      });
+    }
+    
+    // Add listener to save API key when changed
+    var apiKeyField = el('mdblistApiKey');
+    if(apiKeyField){
+      // Save on both change and blur events
+      var saveApiKey = function(){
+        var apiKey = apiKeyField.value.trim();
+        if(apiKey){
+          try{
+            if(typeof encryptData !== 'undefined'){
+              encryptData(apiKey).then(function(encrypted){
+                localStorage.setItem('cp_mdblist_apikey', JSON.stringify(encrypted));
+                console.log('✓ Saved MDBlists API key (encrypted)');
+              }).catch(function(err){
+                // Fallback to plain text if encryption fails
+                localStorage.setItem('cp_mdblist_apikey', apiKey);
+                console.log('✓ Saved MDBlists API key (plain text)');
+              });
+            }else{
+              // encryptData not available, save as plain text
+              localStorage.setItem('cp_mdblist_apikey', apiKey);
+              console.log('✓ Saved MDBlists API key (plain text, encryption not available)');
+            }
+          }catch(e){
+            console.error('Error saving API key:', e);
+          }
+        }
+      };
+      
+      apiKeyField.addEventListener('change', saveApiKey);
+      apiKeyField.addEventListener('blur', saveApiKey);
+    }
+  }, 500);
+});
+
+function disconnectMdblist(){
+  // Only clear the session token, keep credentials for next time
+  localStorage.removeItem('cp_mdblist_token');
+  localStorage.removeItem('cp_mdblist_salt');
+  localStorage.removeItem('cp_mdblist_token_expires');
+  localStorage.removeItem('cp_mdblist_user');
+  // Keep these permanently: cp_mdblist_client_id, cp_mdblist_apikey, cp_mdblist_username
+  
+  S_mdblist = { accessToken: null, username: null, clientId: null, codeVerifier: null, state: null };
+  el('mdblistConnectedBlock').style.display = 'none';
+  el('mdblistSetupBlock').style.display = 'block';
+  el('mdblistStatus').textContent = '';
+  // Don't clear the input fields - keep them filled for convenience
+  el('mdblistJsonInput').value = '';
+  el('mdblistListSelect').innerHTML = '<option value="">-- Load lists above first --</option>';
+  toast('Disconnected from MDBlists. Credentials saved for next login.','ok');
+}
+
+// ── END MDBlists ──
+
+
 var TMDB_COLLECTION_MAP = {
   'Marvel Cinematic Universe': 86311,
   'Star Wars': 10,
@@ -4174,9 +5182,32 @@ function markFirstRunDone(){
   try { localStorage.setItem('cp_first_run_done', '1'); } catch(e){}
 }
 
+function saveHideWelcomePreference(){
+  var checked = el('hideWelcomeCheckbox').checked;
+  try { 
+    localStorage.setItem('cp_hide_welcome_permanently', checked ? '1' : '0');
+    console.log('Welcome hide preference saved: '+checked);
+  } catch(e){}
+}
+
+function isWelcomeHiddenPermanently(){
+  try {
+    return localStorage.getItem('cp_hide_welcome_permanently') === '1';
+  } catch(e){
+    return false;
+  }
+}
+
+function restoreWelcomeHidePreference(){
+  if(el('hideWelcomeCheckbox')){
+    el('hideWelcomeCheckbox').checked = isWelcomeHiddenPermanently();
+  }
+}
+
 async function runSmartDetection(){
   // Only run if first time AND user has libraries
   if(!isFirstRun()) return;
+  if(isWelcomeHiddenPermanently()) return;  // Skip if user permanently hid it
   if(!S.libraries.length) return;
 
   var userId = S.userId;
@@ -4267,6 +5298,10 @@ async function createFromWelcome(){
 
 function closeWelcome(done){
   el('welcomeOverlay').classList.remove('open');
+  // If user checked "Don't show again", mark it
+  if(el('hideWelcomeCheckbox') && el('hideWelcomeCheckbox').checked){
+    saveHideWelcomePreference();
+  }
   if(done) markFirstRunDone();
 }
 
@@ -4462,6 +5497,22 @@ el('fmAddMovieInput').addEventListener('keydown',function(e){if(e.key==='Enter')
       </button>
     </div>
     <div class="preview-body" id="previewBody"></div>
+    
+    <!-- Radarr bar inside preview modal for imports with missing movies -->
+    <div class="add-all-bar" id="previewAddAllBar" style="display:none;margin-top:12px;">
+      <div class="add-all-bar-inner">
+        <p id="previewAddAllLabel">Some movies are missing from your library.</p>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <select id="previewAddAllServerSelect" class="cp-sel" style="font-size:12px;padding:5px 8px;"></select>
+          <button class="btn btn-radarr btn-sm" onclick="addAllMissingFromPreview()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            Send Selected to Radarr
+          </button>
+        </div>
+      </div>
+      <div class="alert" id="previewAddAllAlert"></div>
+    </div>
+    
     <div class="preview-actions">
       <button class="btn btn-secondary" onclick="closePreviewModal()">Cancel</button>
       <button class="btn btn-primary" id="btnPreviewCreate" onclick="createFromPreview()">Create Playlist</button>
@@ -4482,7 +5533,11 @@ el('fmAddMovieInput').addEventListener('keydown',function(e){if(e.key==='Enter')
       <button class="btn btn-secondary" onclick="closeWelcome(false)">Skip for now</button>
       <button class="btn btn-primary" onclick="createFromWelcome()" id="btnWelcomeCreate">Create Selected</button>
     </div>
-    <p style="font-size:11px;color:var(--text3);margin-top:14px;text-align:center;">
+    <label style="font-size:11px;color:var(--text3);margin-top:10px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="hideWelcomeCheckbox" onchange="saveHideWelcomePreference()">
+      Don't show this again
+    </label>
+    <p style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center;">
       This only runs on first login. You can always create playlists later from the search panel.
     </p>
   </div>

@@ -212,6 +212,10 @@
     <a href="#trakt"><div class="dot"></div>Trakt Authentication <span class="new-badge">new</span></a>
     <a href="#trakt-lists"><div class="dot"></div>Importing Lists <span class="new-badge">new</span></a>
 
+    <div class="sidebar-label">MDBlists integration</div>
+    <a href="#mdblist"><div class="dot"></div>MDBlists Setup <span class="new-badge">new</span></a>
+    <a href="#mdblist-lists"><div class="dot"></div>Importing Lists <span class="new-badge">new</span></a>
+
     <div class="sidebar-label">Settings &amp; backup</div>
     <a href="#settings"><div class="dot"></div>Settings Modal <span class="new-badge">new</span></a>
     <a href="#backup"><div class="dot"></div>Backup &amp; Restore <span class="new-badge">new</span></a>
@@ -1297,9 +1301,24 @@
             <p>A green status line shows the Radarr version if the connection succeeds. A red line shows if the URL or API key is incorrect.</p>
           </div>
         </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Set the default quality profile</strong>
+            <p>Below the API key, a "Default Quality Profile" dropdown appears. Click <strong>Refresh</strong> to load your Radarr server's available quality profiles, then select which one to use for this server (e.g., "1080p", "4K", "Any").</p>
+          </div>
+        </div>
       </div>
 
       <p>Settings are saved to local storage automatically as you type. To remove a server, click the <strong>✕</strong> in the server header. Maximum of three servers.</p>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Each server has its own quality profile</strong>
+          If you have a 1080p server and a 4K server, set each one to use its respective quality profile. When you send missing movies to Radarr and choose a server, that server's quality profile is automatically used for all movies being added.
+        </div>
+      </div>
     </div>
 
     <!-- ── AUTO-RECONNECT ─────────────────────────────────────────────────── -->
@@ -1593,6 +1612,304 @@
       </div>
     </div>
 
+    <!-- ── MDBLIST AUTHENTICATION ─────────────────────────────────────────── -->
+    <div class="section" id="mdblist">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <h2>MDBlists Setup</h2>
+        <span class="section-num">26</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>MDBlists is a curated movie database where you can create and share lists of films. Connect your account to import any of your personal lists into Emby collections or send missing movies to Radarr.</p>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>Node.js is required to fetch lists</strong>
+          You must have <strong>Node.js installed</strong> on your computer to retrieve lists from MDBlists. The app won't automatically retrieve lists without it. You don't need to install anything—if Node isn't available, the feature simply won't run and you'll see an error message.
+        </div>
+      </div>
+
+      <h3>Getting Your MDBlists Credentials</h3>
+
+      <h4>Step 1: Get Your Client ID</h4>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Visit MDBlists Developer Settings</strong>
+            <p>Go to <code>https://mdblist.com/developer</code> and log in to your MDBlists account</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Create a new OAuth application</strong>
+            <p>Click "Create New Application" and give it a name (e.g., "Emby Chrono Playlist")</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Set the redirect URL</strong>
+            <p>In the redirect URL field, enter exactly: <code>http://localhost:9999/callback</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Copy your Client ID</strong>
+            <p>The Client ID is displayed immediately. Save it — you'll need it in the app settings.</p>
+          </div>
+        </div>
+      </div>
+
+      <h4>Step 2: Get Your API Key</h4>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Visit MDBlists Preferences</strong>
+            <p>Go to <code>https://mdblist.com/preferences</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Locate your API key</strong>
+            <p>Scroll down to find your personal API key. It's a long alphanumeric string.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Copy your API key</strong>
+            <p>Save this key — you'll need it to fetch lists from the app.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Setting Up in the App</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Open Settings and go to MDBlists tab</strong>
+            <p>Click the gear icon (⚙) at the top-right, then click the "MDBlists" tab</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Enter your Client ID</strong>
+            <p>Paste your Client ID into the "Client ID" field</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Click "Authenticate with MDBlists"</strong>
+            <p>A new browser window opens. If it shows "Can't connect to localhost:9999" — this is normal. Look at the URL bar.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Approve the request and copy the code</strong>
+            <p>After you approve, the URL bar will show something like <code>http://localhost:9999/callback?code=abc123xyz</code>. Copy everything after <code>code=</code> (the code part only).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Paste the code and click "Exchange Code"</strong>
+            <p>Paste the code into the "Authorization Code" field and click the "Exchange Code" button</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <strong>Paste your API key</strong>
+            <p>Once authenticated, paste your API key (from MDBlists Preferences) into the "API Key" field</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <strong>Verify you're connected</strong>
+            <p>A green checkmark appears showing "✓ Connected to MDBlists"</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Your MDBlists credentials are encrypted locally</strong>
+          Your API key and tokens are stored securely in your browser's local storage and never sent anywhere except to MDBlists' official API servers over HTTPS.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MDBLIST LIST IMPORT ───────────────────────────────────────────── -->
+    <div class="section" id="mdblist-lists">
+      <div class="section-header">
+        <div class="section-icon blue">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        </div>
+        <h2>Importing MDBlists Lists</h2>
+        <span class="section-num">27</span>
+        <span class="section-new">New</span>
+      </div>
+
+      <p>Once authenticated with MDBlists, you can import any list (yours or anyone else's) and create Emby collections from them automatically. You can also send missing movies to Radarr.</p>
+
+      <h3>Quick Workflow</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Enter a username</strong>
+            <p>In the MDBlists settings, enter the MDBlists username (can be your own or any public username). This is the account whose lists you want to import.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click "Load My Lists"</strong>
+            <p>The app fetches all available lists for that username. A dropdown populates with the list names.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Select a list and click "Import Selected List"</strong>
+            <p>The app loads the list's movies and shows a preview.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Review matches: green pills = found, red pills = missing</strong>
+            <p>Green pills are movies already in your Emby library. Red pills are missing.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Create collection or send to Radarr</strong>
+            <p>Click "Create Collection" to add matched movies to Emby, or use the Radarr bar to send missing movies to Radarr for download.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Detailed Workflow: Using Any Username</h3>
+      <p>One of the powerful features of MDBlists integration is that you can import lists from <strong>any MDBlists user</strong>, not just your own account. This lets you:</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li>Import curated lists from other users</li>
+        <li>Build collections based on community-created lists</li>
+        <li>Share recommendations with other media server users</li>
+      </ul>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Enter a username (yours or someone else's)</strong>
+            <p>In Settings → MDBlists, enter the username: your own, a friend's, or any public MDBlists username.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Click "Load My Lists"</strong>
+            <p>The button text says "Load My Lists" for convenience, but it actually loads lists from whatever username you entered.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Choose a list from the dropdown</strong>
+            <p>All public lists from that user appear. Select one.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Click "Import Selected List"</strong>
+            <p>The list loads and shows a preview of matches and missing movies.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Sending Missing Movies to Radarr</h3>
+      <p>After importing a list, if you have Radarr configured, a blue bar appears under the list preview with the label "Uncheck any movies you don't want to send".</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Review the missing movies</strong>
+            <p>Red pills show which movies aren't in your Emby library. These are the ones that will be sent to Radarr.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Uncheck any you don't want</strong>
+            <p>If there's a movie you don't want to download, uncheck its box. All are checked by default.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Use Tick All / Untick All for large lists</strong>
+            <p>If the list is huge (50+ movies), use the Tick All or Untick All buttons at the top to quickly select/deselect.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Select your Radarr server</strong>
+            <p>If you have multiple Radarr servers, choose which one to send to. Each server remembers its quality profile.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Click "Send Selected to Radarr"</strong>
+            <p>The app looks up each movie on TMDB and sends it to Radarr with your server's configured quality profile. Progress is shown.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <strong>Monitor the progress</strong>
+            <p>The button shows the progress: (X/Y) movies processed. Once complete, a toast notification shows how many were successfully added to Radarr.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>Collections vs Playlists</strong>
+          MDBlists imports create Emby <strong>Collections</strong> rather than playlists, which are better for organizing thematic groups while preserving individual movie watch history.
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">💡</div>
+        <div class="callout-body">
+          <strong>Quality profiles are per-server</strong>
+          When you have multiple Radarr servers (e.g., one for 1080p and one for 4K), each server has its own quality profile setting. Set it in Radarr settings → scroll to "Default Quality Profile" under each server.
+        </div>
+      </div>
+    </div>
+
     <!-- ── SETTINGS MODAL ────────────────────────────────────────────────── -->
     <div class="section" id="settings">
       <div class="section-header">
@@ -1600,7 +1917,7 @@
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m2.12-2.12l4.24-4.24M19.78 19.78l-4.24-4.24m-2.12-2.12l-4.24-4.24M19.78 4.22l-4.24 4.24m-2.12 2.12L9.08 9.08M23 12h-6m-6 0H5"/></svg>
         </div>
         <h2>Settings Modal</h2>
-        <span class="section-num">26</span>
+        <span class="section-num">28</span>
         <span class="section-new">New</span>
       </div>
 
@@ -1611,6 +1928,7 @@
       <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
         <li><strong>Add Server:</strong> Click the + button to add a new Radarr instance</li>
         <li><strong>Server details:</strong> Enter a friendly name, full URL (e.g. <code>http://192.168.1.100:7878</code>) and API key from Radarr Settings → Security</li>
+        <li><strong>Quality Profile:</strong> For each server, click Refresh to load available profiles, then select the default quality to use when sending missing movies</li>
         <li><strong>Test:</strong> Click to validate the connection before saving</li>
         <li><strong>Remove:</strong> Click the × button to delete a server</li>
       </ul>
@@ -1624,6 +1942,25 @@
         <li><strong>Refresh Status:</strong> Shows progress and any failed collections</li>
       </ul>
 
+      <h3>MDBlists Tab</h3>
+      <p>Connect your MDBlists account to import custom lists into Emby collections and send missing movies to Radarr.</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Client ID:</strong> Get from <code>https://mdblist.com/developer</code> (create a new OAuth app with redirect URL <code>http://localhost:9999/callback</code>)</li>
+        <li><strong>Authenticate:</strong> Click to open the authorization window, approve access, then copy and paste the authorization code</li>
+        <li><strong>API Key:</strong> Get from <code>https://mdblist.com/preferences</code></li>
+        <li><strong>Username:</strong> Enter any MDBlists username to load their public lists</li>
+        <li><strong>Load My Lists:</strong> Fetch all lists from the entered username</li>
+        <li><strong>Disconnect:</strong> Log out of MDBlists (clears token and API key)</li>
+      </ul>
+
+      <h3>Trakt Tab</h3>
+      <p>Connect your Trakt account to import watchlists.</p>
+      <ul style="margin: 10px 0 10px 20px; color: var(--text2); font-size: 14px; line-height: 2;">
+        <li><strong>Client ID &amp; Secret:</strong> Create an application at <code>https://trakt.tv/settings/developer</code></li>
+        <li><strong>Authenticate:</strong> Click to authorize and receive your access token</li>
+        <li><strong>Logout:</strong> Disconnect from Trakt</li>
+      </ul>
+
       <h3>Network Tab</h3>
       <p>View a complete list of all external services the app may contact and their purposes.</p>
       <table class="info-table">
@@ -1631,6 +1968,7 @@
         <tbody>
           <tr><td>Your Emby Server</td><td>Movie library and playlist management (local network)</td></tr>
           <tr><td>Your Radarr Server(s)</td><td>Request missing movie downloads (local network)</td></tr>
+          <tr><td>MDBlists API</td><td>Authenticate and fetch your lists (HTTPS)</td></tr>
           <tr><td>Trakt API</td><td>Authenticate and fetch your watchlists (HTTPS)</td></tr>
           <tr><td>TMDB API</td><td>Fetch franchise and collection data (HTTPS)</td></tr>
           <tr><td>Google Fonts</td><td>Typography for the instructions page only (HTTPS)</td></tr>

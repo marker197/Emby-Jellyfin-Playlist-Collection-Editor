@@ -1,194 +1,235 @@
-# Changelog
+# Emby Chrono Playlist — Changelog
 
-All notable changes to this project are documented here.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to the Emby Chrono Playlist Generator are documented here.
 
 ---
 
-## [4.1] - 2026-06-10
+## [Latest] — June 11, 2026
 
-### Added
-- **Trakt Integration** — Authenticate with Trakt account and import custom watchlists
-  - PIN-based OAuth authentication flow
-  - Load and preview Trakt lists before importing
-  - Create Emby Collections from Trakt lists
-  - Auto-detect missing movies with Radarr integration
-- **Duplicate Playlist Detection** — Warn before creating playlists with duplicate names
-  - Single mode: User choice to confirm or cancel
-  - Bulk mode: Auto-append timestamp to avoid conflicts
-- **Settings Modal** — Centralized configuration interface (v4.0+)
-  - Radarr Tab — Manage multiple servers
-  - TMDB Tab — API key and franchise refresh controls
-  - Network Tab — View all external API endpoints
-  - Server Tab — Emby connection, theme, backup/restore
-  - Trakt Tab — Authentication and account management
-- **Backup & Restore System** — Export/import your entire setup
-  - Download JSON backup of playlists, collections, franchises
-  - Restore backups on new computers or after reinstalls
-  - Merge mode (doesn't replace existing data)
-  - Excludes credentials for security
-- **Jellyfin Compatibility Documentation** — Detailed guide on Jellyfin/Plex support
-  - Jellyfin: High compatibility notes
-  - Plex: Honest assessment of why it's not compatible
-  - How to try on Jellyfin with troubleshooting
-- **Content Security Policy** — Allow HTTP connections for local file usage
+### 🆕 MDBlists Integration (Full Feature Release)
 
-### Fixed
-- Movie fetching from libraries now correctly extracts Items array from API response
-- Trakt import movie matching with proper title normalization
-- Collection creation uses correct query string format (matches Playlist API)
-- Settings modal closes automatically when other modals open
-- Missing variable reference in playlist creation error handling
-- Franchise storage format standardization (Object not Array)
+**Authentication & OAuth**
+- ✅ Device Code OAuth PKCE flow with 30-day token expiry
+- ✅ Persistent credential storage (encrypted + fallback to plain text)
+- ✅ Auto-restore credentials on page load
+- ✅ Disconnect button to clear MDBlists session
 
-### Improved
-- Movie title matching engine with better fuzzy logic
-- API response handling for Emby endpoints
-- User feedback with detailed debug logging for import features
-- Modal stacking and navigation
+**List Management**
+- ✅ Automatic curl server (Node.js) for CORS bypass
+- ✅ Load lists from any MDBlists username (not just your own account)
+- ✅ Auto-fetch list items with proper API endpoint handling
+- ✅ Support for movies, shows, and episodes
 
----
+**Preview & Import**
+- ✅ Movie preview modal showing found (green) and missing (red) items
+- ✅ Individual movie checkboxes for selective sending to Radarr
+- ✅ "Tick All / Untick All" buttons for large lists (50+ movies)
+- ✅ Send Selected to Radarr button (not just "Send All")
+- ✅ Includes year data when sending to Radarr
+- ✅ Auto-clear missing titles state on modal close
 
-## [4.0] - 2026-05-XX
+**Per-Server Quality Profiles**
+- ✅ Quality profile selector under each Radarr server (not global)
+- ✅ Auto-fetch available profiles from each server
+- ✅ Per-server localStorage persistence (`cp_radarr_quality_0`, `cp_radarr_quality_1`, etc.)
+- ✅ Refresh button to reload profiles on demand
+- ✅ Quality profile used when sending missing movies to Radarr
 
-### Added
-- **Settings Modal** — Centralized configuration with 5 tabs
-- **TMDB Franchise Refresh** — Auto-update franchise lists from The Movie Database
-- **Franchise Source Toggle** — Switch between Built-in, Custom, and TMDB ordering
-- **Conflict Resolution Modal** — Handle duplicate franchises elegantly
-- **Franchise Source Labels** — Visual labels for Built-in (grey), TMDB (blue), Custom (purple)
-- **First-Run Detection** — Auto-suggest franchises based on your library
-- **Radarr Auto-Reconnect** — Servers auto-ping and reconnect if dropped
-- **Send All Missing** — One-click to request entire franchise to Radarr
-- **Precision Title Matching** — Rewritten matching engine prevents false positives
-- **Create from Collections** — Use Emby collections as source instead of library
-- **Toast Notifications** — Visual feedback for all actions (success, error, warning)
-- **Light/Dark Theme Toggle** — Persistent theme preference
+**Bug Fixes**
+- ✅ Fixed "encryptData is not defined" error with guarded storage calls
+- ✅ Fixed token persistence with plain text fallback
+- ✅ Fixed API endpoint (list ID instead of slug)
+- ✅ Fixed missing movies list persisting across imports
+- ✅ Fixed parsing of MDBlists response format (movies/shows/episodes arrays)
+- ✅ Fixed profile picture and username display in server settings
 
-### Improved
-- Franchise grid UI with better filtering
-- Playlist refresh performance for large libraries
-- Error handling and user feedback
-- Code organization and comments
+**Settings & UI**
+- ✅ Server username and profile picture display
+- ✅ "Don't show this again" checkbox on welcome overlay
+- ✅ Permanent hide preference stored in localStorage
+- ✅ Updated Radarr setup instructions with quality profile guidance
+
+**Documentation**
+- ✅ Complete MDBlists setup guide with credential instructions
+- ✅ MDBlists import workflow (yours or any username)
+- ✅ Quick reference for Radarr quality profiles
+- ✅ Node.js requirement clarification
+- ✅ Updated settings modal documentation
 
 ---
 
-## [3.1] - 2026-04-XX
+## Previous Sessions
 
-### Added
-- **CSV Import** — Upload custom franchises from CSV files
-- **Bulk Mode** — Create multiple playlists at once
-- **Preview Matches** — Dry-run playlists before creating
-- **TMDB Enrichment (Beta)** — Optional TMDB API integration
+### Session 6 — Radarr Quality Profiles & Per-Server Config
 
-### Fixed
-- Library selection persistence
-- Playlist reordering for collections
+- ✅ Quality profile dropdown moved from global to per-server
+- ✅ Each Radarr server stores its own quality profile preference
+- ✅ Auto-loads profiles from server's API
+- ✅ Refresh button for manual profile reloading
+- ✅ Proper localStorage key naming per server index
 
----
+### Session 5 — Auto Playlist Welcome Overlay
 
-## [3.0] - 2026-03-XX
+- ✅ "Don't show this again" checkbox on welcome screen
+- ✅ Permanent hide preference persisted across page reloads
+- ✅ Respect hidden state in `runSmartDetection()`
+- ✅ Clean UI integration with existing welcome box
 
-### Added
-- **Radarr Integration** — Request missing movies directly
-- **Multiple Radarr Servers** — Manage 4K, HDR, separate instances
-- **Custom Franchises** — Create and save your own movie series
+### Session 4 — Server Settings Improvements
 
-### Improved
-- Movie matching algorithm
-- User interface responsiveness
-- Settings persistence
+- ✅ Display actual Emby username (no more "undefined")
+- ✅ Show user's profile picture if available
+- ✅ Proper user lookup by `S.userId`
+- ✅ Graceful handling of missing user data
 
----
+### Session 3 — MDBlists CORS Bypass
 
-## [2.0] - 2026-02-XX
+- ✅ Node.js curl proxy server (`mdblist-curl-server.js`)
+- ✅ Localhost:3000 forwarding for MDBlists API calls
+- ✅ Auto-detection of curl availability
+- ✅ Mac launcher script for automatic server startup
 
-### Added
-- **Collections Support** — Create Emby BoxSets
-- **Refresh Existing Playlists** — Re-sort and auto-add new movies
-- **Production Order** — Alternative to Release Date ordering
-- **Encrypted Credentials** — AES-GCM encryption for stored passwords
+### Session 2 — Token Persistence & Expiry
 
-### Fixed
-- CORS issues for local file usage
-- Library scanning performance
+- ✅ MDBlists token 30-day expiry tracking
+- ✅ Auto-restoration of valid tokens on page load
+- ✅ Visual feedback: "✓ Connected! (token expires in Xh)"
+- ✅ Token clearing on expiry or manual disconnect
+- ✅ Proper `.then()` handling for async operations
 
----
+### Session 1 — MDBlists Initial Setup
 
-## [1.0] - 2026-01-XX
-
-### Added
-- Initial release
-- Create chronological playlists from 100+ built-in franchises
-- Login to Emby server
-- Select movie libraries
-- Match movies and create playlists
-- Reorder playlists by release date
+- ✅ Device Code OAuth PKCE authentication
+- ✅ Client ID and API key input fields
+- ✅ Authorization code exchange flow
+- ✅ Trakt-style authentication pattern
+- ✅ Settings modal tab for MDBlists configuration
 
 ---
 
-## Roadmap
+## Core Features (Built-in)
 
-### Planned for Future Releases
-- [ ] Keyboard shortcuts for power users
-- [ ] In-app tooltips and help system
-- [ ] Export playlists as M3U format
-- [ ] Mobile-optimized interface
-- [ ] Jellyfin-specific enhancements
-- [ ] Plex compatibility layer (exploratory)
-- [ ] Automated playlist refresh scheduling
-- [ ] Playlist merge and clone operations
-- [ ] User preference profiles
-- [ ] Internationalization/translation support
+### Playlist Creation
+- ✅ Chronological playlist generation from franchises
+- ✅ Smart franchise detection from built-in library (70+ franchises)
+- ✅ Drag-to-reorder playlist items
+- ✅ One-click playlist creation
+- ✅ Playlist refresh on library updates
 
----
+### Collection Management
+- ✅ Create collections from playlists
+- ✅ Create playlists from existing Emby collections
+- ✅ Collection preview before creation
+- ✅ Import/export franchises
 
-## Version Support
+### Radarr Integration
+- ✅ Up to 3 Radarr servers
+- ✅ Click missing movies (red pills) to request
+- ✅ Send all missing to Radarr in one click
+- ✅ Auto-reconnect every 60 seconds
+- ✅ Per-server quality profile selection
+- ✅ Year data included in requests
 
-| Version | Status | Support |
-|---|---|---|
-| 4.1 | Current | ✅ Active |
-| 4.0 | Previous | ⚠️ Limited |
-| 3.x | Older | ❌ No |
-| 2.x | Legacy | ❌ No |
-| 1.x | Legacy | ❌ No |
+### Data Sources
+- ✅ **Built-in:** 70+ franchise definitions
+- ✅ **CSV Import:** Upload custom franchise lists
+- ✅ **TMDB:** Automatic franchise data refresh
+- ✅ **Trakt:** Import watchlists and custom lists
+- ✅ **MDBlists:** Import curated lists (new)
 
----
+### Settings & Persistence
+- ✅ Full settings encryption with fallback
+- ✅ Backup & restore (JSON export)
+- ✅ Local storage persistence
+- ✅ Dark/Light theme toggle
+- ✅ Welcome overlay toggle
 
-## Upgrade Notes
-
-### From 4.0 to 4.1
-- No breaking changes
-- Backup your data before updating (Settings → Export)
-- New Trakt features optional — all existing features work as before
-
-### From 3.x to 4.0
-- Franchise storage format changed (Object instead of Array)
-- Custom franchises will be automatically converted
-- TMDB integration is optional but recommended
-- Settings now centralized in modal instead of scattered UI
-
----
-
-## Bug Reports & Feature Requests
-
-Found a bug? Have a feature idea?
-
-→ **[Open an Issue](https://github.com/marker197/Emby-Jellyfin-Playlist-Collection-Editor/issues)**
-
-Please include:
-- What you were trying to do
-- What happened instead
-- Your Emby version and browser
-- Steps to reproduce (for bugs)
+### UI/UX
+- ✅ Responsive design
+- ✅ Network activity monitor
+- ✅ Real-time connection status
+- ✅ Progress indicators
+- ✅ Toast notifications
+- ✅ Mobile-friendly interface
 
 ---
 
-## Contributing
+## Known Limitations
 
-Want to help improve this app?
+- **Jellyfin:** Compatible but not officially tested
+- **Plex:** Not supported (different API architecture)
+- **Node.js:** Required for MDBlists list retrieval (not included)
+- **CORS:** May require local server for some browser/network configurations
 
-→ **[See CONTRIBUTING.md](CONTRIBUTING.md)**
+---
 
-Contributors are credited in release notes.
+## File Structure
+
+```
+emby-chrono-playlist.html              (Main application, ~5,600 lines)
+emby-chrono-playlist-instruction.html  (Full user guide, 35+ sections)
+mdblist-curl-server.js                 (Node.js CORS proxy)
+start-mdblist-app.sh                   (Mac launcher script)
+CHANGELOG.md                           (This file)
+```
+
+---
+
+## Development Notes
+
+### Storage Keys
+
+**MDBlists:**
+- `cp_mdblist_token` — OAuth access token (cleared on disconnect)
+- `cp_mdblist_token_expires` — Token expiry timestamp
+- `cp_mdblist_client_id` — Client ID (persistent)
+- `cp_mdblist_apikey` — API key (persistent, encrypted)
+- `cp_mdblist_username` — Username (persistent, encrypted)
+
+**Radarr:**
+- `cp_radarr_servers` — Server array (URL, API key, label)
+- `cp_radarr_quality_0` — Quality profile for server 0
+- `cp_radarr_quality_1` — Quality profile for server 1
+- `cp_radarr_quality_2` — Quality profile for server 2
+
+**Welcome:**
+- `cp_first_run_done` — First-run detection
+- `cp_hide_welcome_permanently` — Hide preference
+
+**Other:**
+- `cp_theme` — Light/Dark mode preference
+- `cp_franchises` — Custom franchises
+- `cp_playlists` — Saved playlists
+
+### API Endpoints
+
+**MDBlists:**
+- `GET /lists/user/{username}?sort=created&apikey={key}` — List user's lists
+- `GET /lists/{listId}/items?apikey={key}` — Get list items (uses localhost:3000 proxy)
+
+**Radarr:**
+- `GET /api/v3/qualityprofile` — List quality profiles
+- `GET /api/v3/movie/lookup?term=X` — Search for movie
+- `POST /api/v3/movie` — Add movie to Radarr
+- `GET /api/v3/rootfolder` — List root folders
+
+---
+
+## Future Roadmap
+
+- [ ] Sonarr integration for TV series
+- [ ] Automatic quality profile detection
+- [ ] Batch operations for multiple playlists
+- [ ] Cloud sync for settings
+- [ ] Multi-user profiles
+- [ ] Advanced filtering (year, rating, etc.)
+
+---
+
+## Credits
+
+**Emby Chrono Playlist Generator** — Built for organizing movie franchises chronologically across media servers.
+
+Integrations: Emby, Radarr, Trakt, TMDB, MDBlists
+
+Last updated: June 11, 2026
