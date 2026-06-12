@@ -686,6 +686,43 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
     <div class="alert" id="refreshAddAllAlert"></div>
   </div>
 
+  <!-- REFRESH COLLECTIONS -->
+  <div class="card-title" style="margin-top:20px;">
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Refresh collection
+    <span style="font-size:11px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:2px;">— add newly found movies to imported collections</span>
+  </div>
+  <div class="field" style="margin-bottom:8px;">
+    <label>Select a collection</label>
+    <div class="pl-row">
+      <select id="existingCollection"><option value="">— no saved collections —</option></select>
+      <button class="btn btn-secondary btn-icon" id="btnReloadSavedCollections" onclick="refreshCollectionCounts()" title="Update collection counts from Emby">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+  </div>
+  <button class="btn btn-secondary" id="btnRefreshCollection" onclick="doRefreshCollection()">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    Refresh Collection
+  </button>
+  <div class="progress-wrap" id="collectionProgressWrap" style="display:none;">
+    <div class="progress-bar-bg"><div class="progress-bar" id="collectionProgressBar"></div></div>
+    <div class="progress-label" id="collectionProgressLabel">Refreshing…</div>
+  </div>
+  <div class="alert" id="collectionAlert"></div>
+
+  <!-- Missing movies from collection refresh -->
+  <div class="movie-list" id="collectionMovieList"></div>
+  <div class="add-all-bar" id="collectionAddAllBar" style="display:none;">
+    <div class="add-all-bar-inner">
+      <p id="collectionAddAllLabel">Found new movies in your library to add to this collection.</p>
+      <button class="btn btn-primary btn-sm" onclick="collectionAddAllMissing()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to Collection
+      </button>
+    </div>
+  </div>
+
   <hr class="sep">
 
   <!-- CREATE PLAYLIST -->
@@ -1170,6 +1207,19 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
       <!-- Connected state -->
       <div id="traktConnectedBlock" style="display:none;">
         <div id="traktLoginState" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;"></div>
+        
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px;">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:500;">Import from:</div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;font-size:13px;color:var(--text);">
+            <input type="checkbox" id="traktImportUserLists" checked onchange="saveTraktImportPreferences()">
+            <span>Your saved lists</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text);">
+            <input type="checkbox" id="traktImportLikedLists" onchange="saveTraktImportPreferences()">
+            <span>Lists you've liked</span>
+          </label>
+        </div>
+        
         <div style="display:flex;gap:8px;">
           <button class="btn btn-secondary btn-sm" id="btnTraktLogout" onclick="traktLogout()">
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
@@ -2063,6 +2113,7 @@ async function doLogin(){
     populateRefreshFranchise();
     await loadLibraries();
     await loadPlaylists();
+    loadCollectionsDropdown();
     await loadRadarrFromStorage();
     await loadTmdbKey();
     await loadTraktAccessToken();
@@ -3826,6 +3877,7 @@ function updateTraktLoginUI(){
   if(S.traktAccessToken && S.traktUsername){
     if(setupBlock) setupBlock.style.display = 'none';
     if(connectedBlock) connectedBlock.style.display = 'block';
+    restoreTraktImportPreferences(); // Restore checkbox preferences
     if(loginState) loginState.innerHTML =
       '<div style="font-size:13px;color:var(--success);margin-bottom:4px;">✓ Connected to Trakt</div>'
       +'<div style="font-size:11px;color:var(--text3);">Signed in as <strong style="color:var(--text);">'+esc(S.traktUsername)+'</strong></div>';
@@ -3936,8 +3988,35 @@ function traktLogout(){
 }
 
 var S_traktLists = [];
+async function saveTraktImportPreferences(){
+  var userLists = el('traktImportUserLists').checked;
+  var likedLists = el('traktImportLikedLists').checked;
+  try {
+    localStorage.setItem('cp_trakt_user_lists', userLists ? '1' : '0');
+    localStorage.setItem('cp_trakt_liked_lists', likedLists ? '1' : '0');
+  } catch(e){}
+}
+
+function restoreTraktImportPreferences(){
+  try {
+    var userLists = localStorage.getItem('cp_trakt_user_lists') !== '0';
+    var likedLists = localStorage.getItem('cp_trakt_liked_lists') === '1';
+    if(el('traktImportUserLists')) el('traktImportUserLists').checked = userLists;
+    if(el('traktImportLikedLists')) el('traktImportLikedLists').checked = likedLists;
+  } catch(e){}
+}
+
 async function loadTraktLists(){
   if(!S.traktAccessToken){ toast('Connect your Trakt account first.','err'); return; }
+  
+  // Get import preferences
+  var importUserLists = el('traktImportUserLists') ? el('traktImportUserLists').checked : true;
+  var importLikedLists = el('traktImportLikedLists') ? el('traktImportLikedLists').checked : false;
+  
+  if(!importUserLists && !importLikedLists){
+    toast('Select at least one list source.','warn');
+    return;
+  }
   
   // Try to get stored client ID for trakt-api-key header
   var clientId = '';
@@ -3961,12 +4040,38 @@ async function loadTraktLists(){
     };
     if(clientId) headers['trakt-api-key'] = clientId;
     
-    var r = await fetch('https://api.trakt.tv/users/me/lists', {
-      method: 'GET',
-      headers: headers
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    S_traktLists = await r.json();
+    S_traktLists = [];
+    
+    // Fetch user lists if enabled
+    if(importUserLists){
+      var r = await fetch('https://api.trakt.tv/users/me/lists', {
+        method: 'GET',
+        headers: headers
+      });
+      if(!r.ok) throw new Error('Failed to load user lists (HTTP '+r.status+')');
+      var userLists = await r.json();
+      // Mark as user list
+      userLists.forEach(function(list){ list._source = 'user'; });
+      S_traktLists = S_traktLists.concat(userLists);
+    }
+    
+    // Fetch liked lists if enabled
+    if(importLikedLists){
+      var r = await fetch('https://api.trakt.tv/users/likes/lists', {
+        method: 'GET',
+        headers: headers
+      });
+      if(!r.ok) throw new Error('Failed to load liked lists (HTTP '+r.status+')');
+      var likedResponse = await r.json();
+      // Unwrap the list property (liked lists have different structure)
+      var likedLists = likedResponse.map(function(item){ 
+        var list = item.list || item;
+        list._source = 'liked';
+        return list;
+      });
+      S_traktLists = S_traktLists.concat(likedLists);
+    }
+    
     if(loading) loading.style.display='none';
     renderTraktLists();
   }catch(e){
@@ -3998,7 +4103,8 @@ function renderTraktLists(){
   S_traktLists.forEach(function(list){
     var div = document.createElement('div');
     div.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:6px;';
-    div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="flex:1;min-width:0;"><strong style="display:block;font-size:13px;margin-bottom:2px;">'+esc(list.name)+'</strong><span style="font-size:11px;color:var(--text3);">'+list.item_count+' items</span></div><button class="btn btn-primary btn-sm" onclick="importTraktListStart(event,'+JSON.stringify(list).replace(/"/g,'&quot;')+')"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Import</button></div>';
+    var sourceBadge = list._source === 'liked' ? '<span style="font-size:9px;background:rgba(233,30,99,0.2);color:#e91e63;padding:2px 6px;border-radius:3px;margin-left:6px;">Liked</span>' : '';
+    div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="flex:1;min-width:0;"><strong style="display:block;font-size:13px;margin-bottom:2px;">'+esc(list.name)+sourceBadge+'</strong><span style="font-size:11px;color:var(--text3);">'+list.item_count+' items</span></div><button class="btn btn-primary btn-sm" onclick="importTraktListStart(event,'+JSON.stringify(list).replace(/"/g,'&quot;')+')"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Import</button></div>';
     div.addEventListener('mouseenter', function(){ this.style.borderColor='var(--border2)'; this.style.background='var(--surface3)'; });
     div.addEventListener('mouseleave', function(){ this.style.borderColor='var(--border)';  this.style.background='var(--surface2)'; });
     container.appendChild(div);
@@ -4025,7 +4131,17 @@ async function importTraktListStart(evt, list){
     };
     if(clientId) headers['trakt-api-key'] = clientId;
     
-    var r = await fetch('https://api.trakt.tv/users/me/lists/'+list.ids.slug+'/items/movies', {
+    // Use different endpoint for liked lists vs user lists
+    var url;
+    if(list._source === 'liked'){
+      // For liked lists, use the Trakt numeric ID
+      url = 'https://api.trakt.tv/lists/'+list.ids.trakt+'/items/movies';
+    } else {
+      // For user lists, use the slug with /users/me/
+      url = 'https://api.trakt.tv/users/me/lists/'+list.ids.slug+'/items/movies';
+    }
+    
+    var r = await fetch(url, {
       headers: headers
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -4042,6 +4158,11 @@ function showTraktImportPreview(listName, titles){
   var matched = [];
   var missing = [];
   var allMovies = [];
+  
+  // Store ALL titles immediately for collection saving (before any async operations)
+  // This ensures they're available when user clicks "Create Collection"
+  window._collectionMatchedTitles = titles;
+  console.log('Stored ALL titles for collection:', titles);
   
   // Debug: Log what libraries we have
   console.log('Checked lib IDs:', Array.from(S.checkedLibIds));
@@ -4166,7 +4287,19 @@ async function createCollectionFromTrakt(name, movieIds, missingTitles){
       pingNet('emby');
       var qs = 'Name='+encodeURIComponent(name)+'&Ids='+movieIds.join(',')+'&UserId='+encodeURIComponent(S.userId);
       console.log('Sending query string:', qs);
-      await apiPost('/Collections?'+qs, null);
+      var resp = await apiPost('/Collections?'+qs, null);
+      
+      // Save collection metadata using the matched titles we stored
+      var collectionTitles = window._collectionMatchedTitles || [];
+      console.log('Saving collection metadata:', {name: name, titles: collectionTitles});
+      var collId = resp && resp.Id ? resp.Id : null;
+      saveCollectionMetadata(collId, name, collectionTitles, 'imported');
+      
+      // Save missing movies linked to this collection by ID
+      if(missingTitles && missingTitles.length && collId){
+        saveMissingMoviesForCollection(collId, missingTitles);
+      }
+      
       toast('Collection <b>'+esc(name)+'</b> created with '+movieIds.length+' movies.','ok');
     }else{
       console.log('No matched movies - skipping collection creation');
@@ -4185,6 +4318,396 @@ async function createCollectionFromTrakt(name, movieIds, missingTitles){
     toast('Failed to create collection: '+e.message,'err');
     closePreviewModal();
   }
+}
+
+/* ── Collection Refresh ── */
+var S_savedCollections = [];
+
+function saveMissingMoviesForCollection(collectionId, missingTitles){
+  try {
+    var key = 'cp_collection_missing_movies_'+collectionId;
+    localStorage.setItem(key, JSON.stringify({
+      collectionId: collectionId,
+      missingTitles: missingTitles,
+      savedAt: new Date().toISOString()
+    }));
+    console.log('Saved '+missingTitles.length+' missing movies for collection', collectionId);
+  } catch(e){
+    console.error('Failed to save missing movies:', e);
+  }
+}
+
+function getMissingMoviesForCollection(collectionId){
+  try {
+    var key = 'cp_collection_missing_movies_'+collectionId;
+    var stored = localStorage.getItem(key);
+    if(stored){
+      var data = JSON.parse(stored);
+      return data.missingTitles || [];
+    }
+  } catch(e){
+    console.error('Failed to load missing movies:', e);
+  }
+  return [];
+}
+
+function clearMissingMoviesForCollection(collectionId){
+  try {
+    var key = 'cp_collection_missing_movies_'+collectionId;
+    localStorage.removeItem(key);
+  } catch(e){}
+}
+
+function saveCollectionMetadata(embyCollectionId, name, originalTitles, source){
+  if(!S_savedCollections) S_savedCollections = [];
+  var existing = S_savedCollections.find(function(c){return c.embyId === embyCollectionId;});
+  if(existing){
+    existing.name = name;
+    existing.originalTitles = originalTitles;
+  }else{
+    S_savedCollections.push({
+      embyId: embyCollectionId,
+      name: name,
+      originalTitles: originalTitles,
+      source: source,
+      savedAt: new Date().toISOString()
+    });
+  }
+  try {
+    localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections));
+  } catch(e){}
+  loadCollectionsDropdown();
+}
+
+function loadSavedCollections(){
+  try {
+    var stored = localStorage.getItem('cp_saved_collections');
+    if(stored) S_savedCollections = JSON.parse(stored);
+  } catch(e){}
+}
+
+function loadCollectionsDropdown(){
+  loadSavedCollections();
+  var sel = el('existingCollection');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— select a saved collection —</option>';
+  if(!S_savedCollections.length){
+    sel.innerHTML = '<option value="">No saved collections</option>';
+    return;
+  }
+  S_savedCollections.forEach(function(coll){
+    var opt = document.createElement('option');
+    opt.value = coll.embyId;
+    opt.textContent = coll.name + ' (' + (coll.originalTitles ? coll.originalTitles.length : 0) + ' movies)';
+    opt.dataset.collIndex = S_savedCollections.indexOf(coll);
+    sel.appendChild(opt);
+  });
+}
+
+async function refreshCollectionCounts(){
+  var btn = el('btnReloadSavedCollections');
+  if(btn) btn.disabled = true;
+  
+  try {
+    loadSavedCollections();
+    var syncedMovies = [];
+    
+    // Fetch actual movie counts from Emby for each saved collection
+    for(var i = 0; i < S_savedCollections.length; i++){
+      var coll = S_savedCollections[i];
+      try {
+        var moviesInEmby = await fetchMoviesFromCollection(coll.embyId, S.userId);
+        var currentNames = moviesInEmby.map(function(m){return m.Name;});
+        
+        // Find titles that were in saved list but are no longer in the collection (deleted)
+        var deletedMovies = (coll.originalTitles || []).filter(function(title){
+          return !currentNames.includes(title);
+        });
+        
+        if(deletedMovies.length > 0){
+          console.log('Collection "'+coll.name+'" - removed movies:', deletedMovies);
+          
+          // Get current missing movies and add deleted ones
+          var missingMovies = getMissingMoviesForCollection(coll.embyId);
+          deletedMovies.forEach(function(movie){
+            if(missingMovies.indexOf(movie) === -1){
+              missingMovies.push(movie);
+            }
+          });
+          
+          // Save updated missing movies list
+          saveMissingMoviesForCollection(coll.embyId, missingMovies);
+          syncedMovies.push({collection: coll.name, count: deletedMovies.length});
+        }
+        
+        // Update with actual titles currently in Emby collection
+        coll.originalTitles = currentNames;
+      } catch(e){
+        console.log('Could not fetch collection '+coll.name+' from Emby:', e);
+      }
+    }
+    
+    // Remove collections with 0 movies
+    var beforeCount = S_savedCollections.length;
+    S_savedCollections = S_savedCollections.filter(function(coll){
+      return coll.originalTitles && coll.originalTitles.length > 0;
+    });
+    var removedCount = beforeCount - S_savedCollections.length;
+    
+    // Save updated metadata
+    try {
+      localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections));
+    } catch(e){}
+    
+    // Refresh the dropdown
+    loadCollectionsDropdown();
+    
+    var msg = 'Collection counts updated from Emby!';
+    if(syncedMovies.length > 0){
+      var totalSynced = syncedMovies.reduce(function(sum, item){return sum + item.count;}, 0);
+      msg += ' Synced '+totalSynced+' deleted movie'+(totalSynced!==1?'s':'')+' to missing list.';
+    }
+    if(removedCount > 0) msg += ' Removed '+removedCount+' empty collection'+(removedCount!==1?'s':'');
+    toast(msg, 'ok');
+  }catch(e){
+    toast('Error updating counts: '+e.message, 'err');
+  }
+  
+  if(btn) btn.disabled = false;
+}
+
+async function doRefreshCollection(){
+  var collId = el('existingCollection').value;
+  if(!collId){
+    showAlert('collectionAlert', 'Select a collection to refresh.', 'warn');
+    return;
+  }
+  
+  el('btnRefreshCollection').disabled = true;
+  el('btnRefreshCollection').innerHTML = SPIN + ' Scanning…';
+  setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 10, 'Loading collection data…');
+  hideAlert('collectionAlert');
+  el('collectionMovieList').innerHTML = '';
+  el('collectionAddAllBar').style.display = 'none';
+  
+  try {
+    // Get current missing movies for this collection
+    var missingMovies = getMissingMoviesForCollection(collId);
+    
+    setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 20, 'Fetching current collection movies…');
+    
+    // Get current movies in the collection from Emby
+    var currentMovies = await fetchMoviesFromCollection(collId, S.userId);
+    var currentNames = new Set(currentMovies.map(function(m){return m.Name;}));
+    var currentIds = new Set(currentMovies.map(function(m){return m.Id;}));
+    
+    // Get saved collection data to check for deleted movies
+    loadSavedCollections();
+    var collData = S_savedCollections.find(function(c){return c.embyId === collId;});
+    
+    // Find movies that were in the saved list but deleted from collection
+    var deletedMovies = [];
+    if(collData && collData.originalTitles){
+      deletedMovies = collData.originalTitles.filter(function(title){
+        return !currentNames.has(title);
+      });
+      
+      // Add deleted movies back to missing movies list
+      if(deletedMovies.length > 0){
+        console.log('Found '+deletedMovies.length+' deleted movies:', deletedMovies);
+        deletedMovies.forEach(function(movie){
+          if(missingMovies.indexOf(movie) === -1){
+            missingMovies.push(movie);
+          }
+        });
+        // Save updated missing movies list
+        saveMissingMoviesForCollection(collId, missingMovies);
+      }
+    }
+    
+    // If no missing movies to search for, we're done
+    if(!missingMovies.length){
+      showAlert('collectionAlert', 'Collection is up to date. No missing movies.', 'info');
+      el('btnRefreshCollection').disabled = false;
+      el('btnRefreshCollection').innerHTML = '<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh Collection';
+      el('collectionProgressWrap').style.display = 'none';
+      return;
+    }
+    
+    setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 35, 'Fetching library movies…');
+    
+    // Get all movies from the library
+    var allLibraryMovies = await apiGet('/Items?IncludeItemTypes=Movie&Recursive=true&Fields=Id,Name&Limit=5000&UserId='+S.userId);
+    var libraryMovies = (allLibraryMovies && allLibraryMovies.Items) || [];
+    
+    setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 50, 'Searching for '+missingMovies.length+' missing movies…');
+    
+    // Search library for each missing title
+    var matched = [];
+    for(var i = 0; i < missingMovies.length; i++){
+      var title = missingMovies[i];
+      setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 50 + (i / missingMovies.length * 35), 'Searching: '+title+'…');
+      
+      // Find matching movie in library using fuzzy matching
+      var m = libraryMovies.find(function(mov){
+        var movTitle = mov.Name || '';
+        if(movTitle === title) return true;
+        
+        // Remove year in parentheses for fuzzy matching
+        var tClean = title.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+        var movClean = movTitle.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+        
+        if(movClean === tClean) return true;
+        if(movClean.indexOf(tClean) === 0) return true;
+        if(tClean.indexOf(movClean) === 0) return true;
+        
+        return false;
+      });
+      
+      if(m && !currentIds.has(m.Id)){
+        matched.push({Id: m.Id, Name: m.Name});
+      }
+    }
+    
+    setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 90, 'Processing results…');
+    
+    el('btnRefreshCollection').disabled = false;
+    el('btnRefreshCollection').innerHTML = '<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh Collection';
+    
+    if(matched.length){
+      el('collectionAddAllLabel').textContent = 'Found '+matched.length+' missing movie'+(matched.length!==1?'s':'')+' now available in your library!';
+      el('collectionMovieList').innerHTML = matched.map(function(m){
+        return '<span style="display:inline-block;border-radius:5px;padding:3px 9px;font-size:11px;margin:2px 2px 0 0;border:1px solid rgba(76,175,80,.3);color:#4caf50;background:rgba(76,175,80,.12);">'+esc(m.Name)+'</span>';
+      }).join('');
+      el('collectionAddAllBar').style.display = 'block';
+      window._newCollectionMovies = matched;
+      // Save to localStorage for persistence
+      try {
+        localStorage.setItem('cp_pending_collection_movies_'+collId, JSON.stringify({collId: collId, movies: matched, savedAt: new Date().toISOString()}));
+      } catch(e){}
+    }else{
+      el('collectionMovieList').innerHTML = '';
+      el('collectionAddAllBar').style.display = 'none';
+    }
+    
+    setProgress('collectionProgressBar', 'collectionProgressLabel', 'collectionProgressWrap', 100, 'Done!');
+    setTimeout(function(){el('collectionProgressWrap').style.display = 'none';}, 1500);
+    
+    var msg = 'Searched '+missingMovies.length+' missing movie'+(missingMovies.length!==1?'s':'')+'. Found '+matched.length+'.';
+    if(deletedMovies.length > 0) msg += ' Synced '+deletedMovies.length+' deleted movie'+(deletedMovies.length!==1?'s':'');
+    showAlert('collectionAlert', msg, matched.length > 0 ? 'ok' : 'warn');
+  }catch(e){
+    el('btnRefreshCollection').disabled = false;
+    el('btnRefreshCollection').innerHTML = '<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh Collection';
+    el('collectionProgressWrap').style.display = 'none';
+    console.error('Error refreshing collection:', e);
+    showAlert('collectionAlert', 'Error: '+e.message, 'err');
+  }
+}
+
+async function collectionAddAllMissing(){
+  var collId = el('existingCollection').value;
+  if(!collId){
+    toast('No collection selected.','warn');
+    return;
+  }
+  
+  // Get movies from window variable or localStorage
+  var moviesToAdd = window._newCollectionMovies;
+  if(!moviesToAdd){
+    try {
+      var stored = localStorage.getItem('cp_pending_collection_movies_'+collId);
+      if(stored){
+        var data = JSON.parse(stored);
+        moviesToAdd = data.movies;
+      }
+    } catch(e){}
+  }
+  
+  if(!moviesToAdd || !moviesToAdd.length){
+    toast('No movies to add.','warn');
+    return;
+  }
+  
+  var btn = el('collectionAddAllBar').querySelector('button');
+  btn.disabled = true;
+  btn.innerHTML = SPIN + ' Adding…';
+  
+  try {
+    var movieIds = moviesToAdd.map(function(m){return m.Id;});
+    console.log('Adding to collection:', {collId: collId, movieIds: movieIds});
+    pingNet('emby');
+    
+    // Emby endpoint to add items to a collection
+    var endpoint = '/Collections/'+collId+'/Items?Ids='+movieIds.join(',');
+    console.log('Using endpoint:', endpoint);
+    
+    var response = await apiPost(endpoint, null);
+    console.log('Add response:', response);
+    
+    toast('Added '+movieIds.length+' movie'+(movieIds.length!==1?'s':'')+' to collection.', 'ok');
+    el('collectionAddAllBar').style.display = 'none';
+    el('collectionMovieList').innerHTML = '';
+    window._newCollectionMovies = [];
+    
+    // Remove added movies from the missing movies list
+    var missingMovies = getMissingMoviesForCollection(collId);
+    moviesToAdd.forEach(function(addedMovie){
+      var index = missingMovies.findIndex(function(m){
+        // Match by name
+        return m === addedMovie.Name || m.toLowerCase() === addedMovie.Name.toLowerCase();
+      });
+      if(index !== -1){
+        missingMovies.splice(index, 1);
+      }
+    });
+    
+    // Save updated missing movies list
+    if(missingMovies.length > 0){
+      try {
+        var key = 'cp_collection_missing_movies_'+collId;
+        localStorage.setItem(key, JSON.stringify({
+          collectionId: collId,
+          missingTitles: missingMovies,
+          savedAt: new Date().toISOString()
+        }));
+      } catch(e){}
+    }else{
+      // No more missing movies, clear the storage
+      clearMissingMoviesForCollection(collId);
+    }
+    
+    // Update collection metadata with newly added movies
+    loadSavedCollections();
+    var collData = S_savedCollections.find(function(c){return c.embyId === collId;});
+    if(collData && moviesToAdd){
+      moviesToAdd.forEach(function(movie){
+        if(collData.originalTitles.indexOf(movie.Name) === -1){
+          collData.originalTitles.push(movie.Name);
+        }
+      });
+      try {
+        localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections));
+      } catch(e){}
+    }
+    
+    // Clear from localStorage
+    try {
+      localStorage.removeItem('cp_pending_collection_movies_'+collId);
+    } catch(e){}
+    
+    // Reload collections to reflect the change
+    setTimeout(function(){
+      loadCollectionsDropdown();
+      el('existingCollection').value = collId;
+    }, 500);
+  }catch(e){
+    console.error('Failed to add movies to collection:', e);
+    toast('Failed to add movies: '+e.message, 'err');
+  }
+  
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to Collection';
 }
 
 /* ── MDBlists Public PKCE OAuth ── */

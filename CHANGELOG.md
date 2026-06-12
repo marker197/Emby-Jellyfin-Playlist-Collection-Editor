@@ -4,7 +4,60 @@ All notable changes to the Emby Chrono Playlist Generator are documented here.
 
 ---
 
-## [Latest] — June 11, 2026
+## [Latest] — June 12, 2026
+
+### 🆕 Collection Management System (Full Feature Release)
+
+**Collection Creation & Saving**
+- ✅ Create collections from Trakt and MDBlists imports
+- ✅ Automatically save collection metadata by collection ID
+- ✅ Store all original titles (matched + missing) for future refresh
+- ✅ Collection ID-based linking (works even if renamed in Emby)
+
+**Missing Movies Tracking**
+- ✅ Separate localStorage for missing movies: `cp_collection_missing_movies_{collectionId}`
+- ✅ Automatically saved when creating collections from imports
+- ✅ Linked to collection by ID, not by name (rename-proof)
+
+**Refresh Collection Feature**
+- ✅ Search library for missing movies from saved list
+- ✅ Fuzzy matching for title variations (handles year removal, substring matching)
+- ✅ Show found movies in green, ready to add to collection
+- ✅ Add all found movies to collection in one click
+- ✅ Automatically remove added movies from missing list
+- ✅ Persist found movies to localStorage for reliability
+
+**Deleted Movie Sync**
+- ✅ Detect when movies are deleted from collections in Emby
+- ✅ Automatically add deleted movies back to missing list
+- ✅ Update saved collection metadata to match Emby's current state
+- ✅ Show toast with sync confirmation ("Synced X deleted movies")
+
+**Collection Count Updates**
+- ✅ Refresh circle button updates collection counts from Emby
+- ✅ Syncs deleted movies to missing list on refresh
+- ✅ Removes empty collections (0 movies) from saved list
+- ✅ Toast confirmation with count of synced/removed items
+
+**Storage Keys**
+- `cp_saved_collections` — Collection metadata (embyId, name, originalTitles, source)
+- `cp_collection_missing_movies_{collectionId}` — Missing titles for each collection
+- `cp_pending_collection_movies_{collectionId}` — Temporary storage for movies to add
+
+**Works with Both Platforms**
+- ✅ Trakt imports
+- ✅ MDBlists imports
+- ✅ Identical workflow for both
+
+**Bug Fixes This Session**
+- ✅ Fixed matched titles not being stored (timing issue with Promise callbacks)
+- ✅ Fixed missing movies not being saved (now saves all original titles)
+- ✅ Fixed metadata sync (deleted movies now tracked properly)
+- ✅ Fixed localStorage persistence (movies persist across page reloads)
+
+---
+
+## [Previous] — June 11, 2026
 
 ### 🆕 MDBlists Integration (Full Feature Release)
 
