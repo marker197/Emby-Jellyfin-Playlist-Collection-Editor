@@ -43,6 +43,10 @@ node --version
 
 Should show something like `v20.x.x`
 
+Open the start mdblist.sh file with terminal, command and it will start the server and open the app..
+
+HTML, .js and .sh files shouls all be int he same directory.
+
 ---
 
 ## Features
