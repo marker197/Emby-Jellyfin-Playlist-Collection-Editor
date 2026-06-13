@@ -4799,6 +4799,8 @@ function saveCollectionMetadata(embyCollectionId, name, originalTitles, source, 
       source: sourceInfo.source || source,
       sourceUsername: sourceInfo.sourceUsername,
       sourceListId: sourceInfo.sourceListId,
+      sourceListApiKey: sourceInfo.sourceListApiKey,
+      sourceListIsLiked: sourceInfo.sourceListIsLiked,
       description: description || '',
       savedAt: new Date().toISOString(),
       autoRefresh: false,
@@ -6576,6 +6578,10 @@ async function showCollectionDetails(embyId, collIndex){
     detailsHtml += '<span>Auto-refresh this collection</span>';
     detailsHtml += '</label>';
     
+    // Manual refresh button
+    detailsHtml += '<button class="btn btn-secondary btn-sm" id="refreshBtn_'+collIndex+'" onclick="manualRefreshCollection('+collIndex+')" style="margin-bottom:8px;">⟳ Refresh Now</button>';
+    detailsHtml += '<div id="refreshStatus_'+collIndex+'" style="font-size:11px;color:var(--text3);margin-bottom:8px;"></div>';
+    
     if(refreshEnabled){
       var refreshInterval = coll.refreshInterval || 24;
       detailsHtml += '<div style="margin-left:24px;font-size:11px;color:var(--text3);margin-bottom:8px;">Last refresh: '+(coll.lastSourceFetch ? new Date(coll.lastSourceFetch).toLocaleString() : 'Never')+'</div>';
@@ -6812,46 +6818,204 @@ async function checkAutoRefreshes(){
   }
 }
 
+async function manualRefreshCollection(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var statusEl = el('refreshStatus_'+collIndex);
+  var btnEl = el('refreshBtn_'+collIndex);
+  
+  if(!coll.source || (coll.source !== 'Trakt' && coll.source !== 'MDBlists')){
+    toast('Only Trakt/MDBlists collections can refresh','err');
+    return;
+  }
+  
+  try{
+    // Show progress
+    statusEl.textContent = '⟳ Refreshing...';
+    btnEl.disabled = true;
+    
+    var result = null;
+    var refreshType = coll.refreshType || 'source';
+    
+    if(refreshType === 'source'){
+      result = await refreshCollectionFromSourceManual(collIndex);
+    } else {
+      result = await refreshCollectionFromLibraryManual(collIndex);
+    }
+    
+    // Update status
+    if(result){
+      statusEl.innerHTML = '<span style="color:var(--ok);">✓ '+result.message+'</span>';
+      toast(result.toastMessage, 'ok');
+    } else {
+      statusEl.innerHTML = '<span style="color:var(--warn);">No changes</span>';
+    }
+    
+    // Reload to show updated data
+    setTimeout(function(){
+      showCollectionDetails(coll.embyId, collIndex);
+    }, 1000);
+    
+  } catch(e){
+    statusEl.innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'</span>';
+    toast('Refresh failed: '+e.message, 'err');
+  } finally{
+    btnEl.disabled = false;
+  }
+}
+
 async function refreshCollectionFromSource(collIndex){
+  // Auto-refresh version - silently refresh without UI feedback
   var coll = S_savedCollections[parseInt(collIndex)];
   if(coll.source !== 'Trakt' && coll.source !== 'MDBlists') return;
   
   try{
     console.log('Auto-refreshing collection from source: '+coll.name);
-    
-    var newTitles = [];
-    
-    if(coll.source === 'Trakt'){
-      newTitles = await fetchTraktListItemsForRefresh(coll);
-    } else if(coll.source === 'MDBlists'){
-      newTitles = await fetchMdblistsItemsForRefresh(coll);
-    }
-    
-    if(!newTitles || newTitles.length === 0){
-      console.log('No items found on source refresh');
-      return;
-    }
-    
-    // Find new items not in current collection
-    var oldTitles = coll.importedTitles || [];
-    var newItems = newTitles.filter(function(title){ return !oldTitles.includes(title); });
-    
-    console.log('Found '+newItems.length+' new items');
-    
-    // Send to Radarr if enabled
-    if(coll.radarrAutoSend && newItems.length > 0){
-      await sendMoviesToRadarr(newItems, coll.radarrServerId);
-    }
-    
-    // Update collection with all new titles
-    coll.importedTitles = newTitles;
-    coll.lastSourceFetch = new Date().toISOString();
-    try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
-    console.log('✓ Collection refreshed: '+coll.name);
-    
+    await refreshCollectionFromSourceManual(collIndex);
   } catch(e){
-    console.error('Error refreshing collection: '+e.message);
+    console.error('Error in auto-refresh: '+e.message);
   }
+}
+
+async function refreshCollectionFromSourceManual(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  
+  console.log('Manual refresh of: '+coll.name);
+  
+  var newTitles = [];
+  
+  if(coll.source === 'Trakt'){
+    newTitles = await fetchTraktListItemsForRefresh(coll);
+  } else if(coll.source === 'MDBlists'){
+    newTitles = await fetchMdblistsItemsForRefresh(coll);
+  }
+  
+  if(!newTitles || newTitles.length === 0){
+    console.log('No items found');
+    return null;
+  }
+  
+  // Find new items
+  var oldTitles = coll.importedTitles || [];
+  var newItems = newTitles.filter(function(title){ return !oldTitles.includes(title); });
+  var removedItems = oldTitles.filter(function(title){ return !newTitles.includes(title); });
+  
+  console.log('New: '+newItems.length+', Removed: '+removedItems.length);
+  
+  // Send to Radarr if enabled
+  var radarrCount = 0;
+  if(coll.radarrAutoSend && newItems.length > 0){
+    radarrCount = await sendMoviesToRadarrAndCount(newItems, coll.radarrServerId);
+  }
+  
+  // Update collection
+  coll.importedTitles = newTitles;
+  coll.lastSourceFetch = new Date().toISOString();
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  
+  var message = 'Found '+newItems.length+' new, '+removedItems.length+' removed';
+  var toastMsg = '✓ '+coll.name+': '+newItems.length+' new items';
+  if(radarrCount > 0){
+    toastMsg += ', '+radarrCount+' sent to Radarr';
+  }
+  
+  return {
+    message: message,
+    toastMessage: toastMsg,
+    newCount: newItems.length,
+    removedCount: removedItems.length,
+    radarrCount: radarrCount
+  };
+}
+
+async function refreshCollectionFromLibraryManual(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  
+  console.log('Manual library scan of: '+coll.name);
+  
+  if(!S.serverUrl || !S.token || !S.userId){
+    throw new Error('Not connected to Emby');
+  }
+  
+  var data = await apiGet('/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Id,Name&Limit=10000&UserId='+S.userId);
+  var libraryItems = data.Items || [];
+  var libraryTitles = libraryItems.map(function(item){ return item.Name; });
+  
+  // Find items in collection that exist in library
+  var collectionTitles = coll.importedTitles || [];
+  var foundItems = collectionTitles.filter(function(title){ return libraryTitles.includes(title); });
+  var missingItems = collectionTitles.filter(function(title){ return !libraryTitles.includes(title); });
+  
+  console.log('Found: '+foundItems.length+', Missing: '+missingItems.length);
+  
+  coll.lastSourceFetch = new Date().toISOString();
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  
+  return {
+    message: 'Found '+foundItems.length+' in library, '+missingItems.length+' missing',
+    toastMessage: '✓ '+coll.name+': '+foundItems.length+' found, '+missingItems.length+' missing',
+    foundCount: foundItems.length,
+    missingCount: missingItems.length
+  };
+}
+
+async function sendMoviesToRadarrAndCount(movieTitles, radarrServerId){
+  var count = 0;
+  try{
+    var serverId = parseInt(radarrServerId);
+    if(isNaN(serverId) || !S.radarrServers || !S.radarrServers[serverId]){
+      return 0;
+    }
+    
+    var srv = S.radarrServers[serverId];
+    
+    for(var i = 0; i < movieTitles.length; i++){
+      var title = movieTitles[i];
+      
+      try{
+        var searchUrl = srv.url + '/api/v3/movie/lookup?term=' + encodeURIComponent(title);
+        var searchRes = await fetch(searchUrl, {headers: {'X-Api-Key': srv.apiKey}});
+        
+        if(!searchRes.ok) continue;
+        
+        var searchData = await searchRes.json();
+        if(!searchData || searchData.length === 0) continue;
+        
+        var movie = searchData[0];
+        var qualityProfileId = srv.qualityProfileId || 1;
+        var rootFolderPath = srv.rootFolder || '/movies';
+        
+        var addUrl = srv.url + '/api/v3/movie';
+        var addRes = await fetch(addUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': srv.apiKey
+          },
+          body: JSON.stringify({
+            title: movie.title,
+            titleSlug: movie.titleSlug,
+            tmdbId: movie.tmdbId,
+            images: movie.images || [],
+            year: movie.year,
+            qualityProfileId: qualityProfileId,
+            rootFolderPath: rootFolderPath,
+            monitored: true,
+            addOptions: {searchForMovie: true}
+          })
+        });
+        
+        if(addRes.ok){
+          count++;
+        }
+      } catch(e){
+        // Continue on error
+      }
+    }
+  } catch(e){
+    console.error('Error in Radarr count: '+e.message);
+  }
+  
+  return count;
 }
 
 async function refreshCollectionFromLibrary(collIndex){
