@@ -16,6 +16,33 @@ A single-file web app for creating perfectly-ordered movie playlists on your Emb
 
 That's it! Your playlist appears in Emby immediately.
 
+# MDBlists Server Setup Guide
+
+Get the MDBlists server running in 2 minutes!
+
+---
+
+## Prerequisites
+
+You need **Node.js** installed on your computer.
+
+### Install Node.js
+
+**Windows/Mac:** Go to https://nodejs.org and download the **LTS version**. Run the installer.
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install nodejs
+```
+
+**Verify it worked:**
+```bash
+node --version
+```
+
+Should show something like `v20.x.x`
+
 ---
 
 ## Features
