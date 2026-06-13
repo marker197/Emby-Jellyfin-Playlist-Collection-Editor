@@ -3392,6 +3392,69 @@ function openRadarrModal(pillEl,title){
 
 function closeModal(){el('radarrModal').classList.remove('open');hideAlert('modalAlert');}
 
+async function sendToRadarrSilent(srv, title){
+  // Silent version of sendToRadarr for background refresh - returns true if sent
+  try{
+    var base = srv.url.replace(/\/$/, '');
+    pingNet('radarr');
+    
+    var lu = await fetch(base + '/api/v3/movie/lookup?term=' + encodeURIComponent(title), {
+      headers: {'X-Api-Key': srv.apiKey}
+    });
+    
+    if(!lu.ok) throw new Error('Lookup failed: HTTP ' + lu.status);
+    
+    var results = await lu.json();
+    if(!results || !results.length) throw new Error('No results found for "' + title + '"');
+    
+    var rfReq = await fetch(base + '/api/v3/rootfolder', {headers: {'X-Api-Key': srv.apiKey}});
+    var qpReq = await fetch(base + '/api/v3/qualityprofile', {headers: {'X-Api-Key': srv.apiKey}});
+    
+    var rootFolders = rfReq.ok ? await rfReq.json() : [];
+    var qualityProfiles = qpReq.ok ? await qpReq.json() : [];
+    
+    var rootPath = (rootFolders[0] && rootFolders[0].path) || '/movies';
+    var qualityId = (qualityProfiles[0] && qualityProfiles[0].id) || 1;
+    var movie = results[0];
+    
+    var payload = {
+      title: movie.title,
+      qualityProfileId: qualityId,
+      titleSlug: movie.titleSlug,
+      images: movie.images || [],
+      tmdbId: movie.tmdbId,
+      year: movie.year,
+      rootFolderPath: rootPath,
+      monitored: true,
+      addOptions: {searchForMovie: true}
+    };
+    
+    pingNet('radarr');
+    var addResp = await fetch(base + '/api/v3/movie', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': srv.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if(addResp.status === 201 || addResp.status === 200){
+      console.log('✓ Sent to Radarr: ' + title);
+      return true;
+    } else if(addResp.status === 400){
+      console.log('⊘ Already in Radarr: ' + title);
+      return false; // Already there, don't count as error
+    } else {
+      throw new Error('HTTP ' + addResp.status);
+    }
+    
+  } catch(e){
+    console.error('Error sending "' + title + '" to Radarr: ' + e.message);
+    return false;
+  }
+}
+
 async function sendToRadarr(srv,title,pillEl){
   var pick=el('radarrPick');
   pick.innerHTML='<div style="text-align:center;padding:14px;color:var(--text2);font-size:13px;">'+SPIN+' Looking up "'+esc(title)+'"…</div>';
@@ -6619,6 +6682,7 @@ async function showCollectionDetails(embyId, collIndex){
           detailsHtml += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">';
           detailsHtml += '<span>Radarr Server:</span>';
           detailsHtml += '<select id="radarrServerSelect_'+collIndex+'" onchange="setRadarrServer('+collIndex+')" style="padding:4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;">';
+          detailsHtml += '<option value="">-- Select a server --</option>';
           S.radarrServers.forEach(function(srv, idx){
             var selected = (coll.radarrServerId === idx) ? 'selected' : '';
             detailsHtml += '<option value="'+idx+'" '+selected+'>'+(srv.name || 'Server '+idx)+'</option>';
@@ -6766,7 +6830,16 @@ function toggleRadarrSend(collIndex){
 function setRadarrServer(collIndex){
   var coll = S_savedCollections[parseInt(collIndex)];
   var select = el('radarrServerSelect_'+collIndex);
-  coll.radarrServerId = parseInt(select.value);
+  var value = select.value;
+  
+  if(value === ''){
+    coll.radarrServerId = undefined;
+    toast('Radarr server cleared', 'ok');
+  } else {
+    coll.radarrServerId = parseInt(value);
+    toast('Radarr server set to: '+S.radarrServers[coll.radarrServerId].name, 'ok');
+  }
+  
   try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
 }
 
@@ -6894,26 +6967,60 @@ async function refreshCollectionFromSourceManual(collIndex){
     return null;
   }
   
-  // Find new items
-  var oldTitles = coll.importedTitles || [];
-  var newItems = newTitles.filter(function(title){ return !oldTitles.includes(title); });
-  var removedItems = oldTitles.filter(function(title){ return !newTitles.includes(title); });
-  
-  console.log('New: '+newItems.length+', Removed: '+removedItems.length);
-  
-  // Send to Radarr if enabled
-  var radarrCount = 0;
-  if(coll.radarrAutoSend && newItems.length > 0){
-    radarrCount = await sendMoviesToRadarrAndCount(newItems, coll.radarrServerId);
+  // Get what's actually in the Emby collection
+  var embyItems = [];
+  try {
+    if(S.serverUrl && S.token && S.userId){
+      var data = await apiGet('/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Id,Name&Limit=10000&UserId='+S.userId);
+      embyItems = data.Items || [];
+    }
+  } catch(e){
+    console.error('Could not fetch Emby items: '+e.message);
   }
   
-  // Update collection
+  var embyTitles = embyItems.map(function(item){ return item.Name; });
+  
+  // Find items in list that are NOT in Emby (missing items)
+  var missingItems = newTitles.filter(function(title){ return !embyTitles.includes(title); });
+  
+  // Also track items that were in old import but now removed from source
+  var oldTitles = coll.importedTitles || [];
+  var removedItems = oldTitles.filter(function(title){ return !newTitles.includes(title); });
+  
+  console.log('Missing from Emby: '+missingItems.length+', Removed from source: '+removedItems.length);
+  
+  // Send MISSING items to Radarr if enabled
+  var radarrCount = 0;
+  if(coll.radarrAutoSend && missingItems.length > 0){
+    console.log('Radarr auto-send enabled, sending '+missingItems.length+' missing items');
+    
+    // Get the server object
+    var serverId = parseInt(coll.radarrServerId);
+    if(!isNaN(serverId) && S.radarrServers && S.radarrServers[serverId]){
+      var srv = S.radarrServers[serverId];
+      
+      // Send each item using the existing sendToRadarr function
+      for(var j = 0; j < missingItems.length; j++){
+        try{
+          var result = await sendToRadarrSilent(srv, missingItems[j]);
+          if(result) radarrCount++;
+        } catch(e){
+          console.error('Error sending '+missingItems[j]+': '+e.message);
+        }
+      }
+    }
+    console.log('Radarr sent: '+radarrCount+' items');
+  } else {
+    console.log('Radarr auto-send check: enabled='+coll.radarrAutoSend+', missingItems='+missingItems.length);
+  }
+  
+  // Update collection with all titles from source
   coll.importedTitles = newTitles;
   coll.lastSourceFetch = new Date().toISOString();
   try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
   
-  var message = 'Found '+newItems.length+' new, '+removedItems.length+' removed';
-  var toastMsg = '✓ '+coll.name+': '+newItems.length+' new items';
+  var message = 'Missing: '+missingItems.length+', Removed: '+removedItems.length;
+  var toastMsg = '✓ '+coll.name+': '+missingItems.length+' missing items';
   if(radarrCount > 0){
     toastMsg += ', '+radarrCount+' sent to Radarr';
   }
@@ -6921,7 +7028,7 @@ async function refreshCollectionFromSourceManual(collIndex){
   return {
     message: message,
     toastMessage: toastMsg,
-    newCount: newItems.length,
+    missingCount: missingItems.length,
     removedCount: removedItems.length,
     radarrCount: radarrCount
   };
@@ -6959,63 +7066,8 @@ async function refreshCollectionFromLibraryManual(collIndex){
 }
 
 async function sendMoviesToRadarrAndCount(movieTitles, radarrServerId){
-  var count = 0;
-  try{
-    var serverId = parseInt(radarrServerId);
-    if(isNaN(serverId) || !S.radarrServers || !S.radarrServers[serverId]){
-      return 0;
-    }
-    
-    var srv = S.radarrServers[serverId];
-    
-    for(var i = 0; i < movieTitles.length; i++){
-      var title = movieTitles[i];
-      
-      try{
-        var searchUrl = srv.url + '/api/v3/movie/lookup?term=' + encodeURIComponent(title);
-        var searchRes = await fetch(searchUrl, {headers: {'X-Api-Key': srv.apiKey}});
-        
-        if(!searchRes.ok) continue;
-        
-        var searchData = await searchRes.json();
-        if(!searchData || searchData.length === 0) continue;
-        
-        var movie = searchData[0];
-        var qualityProfileId = srv.qualityProfileId || 1;
-        var rootFolderPath = srv.rootFolder || '/movies';
-        
-        var addUrl = srv.url + '/api/v3/movie';
-        var addRes = await fetch(addUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': srv.apiKey
-          },
-          body: JSON.stringify({
-            title: movie.title,
-            titleSlug: movie.titleSlug,
-            tmdbId: movie.tmdbId,
-            images: movie.images || [],
-            year: movie.year,
-            qualityProfileId: qualityProfileId,
-            rootFolderPath: rootFolderPath,
-            monitored: true,
-            addOptions: {searchForMovie: true}
-          })
-        });
-        
-        if(addRes.ok){
-          count++;
-        }
-      } catch(e){
-        // Continue on error
-      }
-    }
-  } catch(e){
-    console.error('Error in Radarr count: '+e.message);
-  }
-  
-  return count;
+  // Just call sendMoviesToRadarr which now returns the count
+  return await sendMoviesToRadarr(movieTitles, radarrServerId);
 }
 
 async function refreshCollectionFromLibrary(collIndex){
@@ -7127,17 +7179,15 @@ async function fetchMdblistsItemsForRefresh(coll){
 }
 
 async function sendMoviesToRadarr(movieTitles, radarrServerId){
+  var successCount = 0;
   try{
     var serverId = parseInt(radarrServerId);
     if(isNaN(serverId) || !S.radarrServers || !S.radarrServers[serverId]){
       console.error('Radarr server not configured');
-      return;
+      return 0;
     }
     
     var srv = S.radarrServers[serverId];
-    var successCount = 0;
-    var failCount = 0;
-    
     console.log('Sending '+movieTitles.length+' movies to Radarr ('+srv.name+')');
     
     for(var i = 0; i < movieTitles.length; i++){
@@ -7154,7 +7204,6 @@ async function sendMoviesToRadarr(movieTitles, radarrServerId){
         
         if(!searchRes.ok){
           console.warn('Search failed for '+title+': HTTP '+searchRes.status);
-          failCount++;
           continue;
         }
         
@@ -7162,15 +7211,13 @@ async function sendMoviesToRadarr(movieTitles, radarrServerId){
         
         if(!searchData || searchData.length === 0){
           console.warn('No results found for: '+title);
-          failCount++;
           continue;
         }
         
         var movie = searchData[0];
         console.log('Found: '+movie.title+' ('+movie.year+')');
         
-        // Get quality profile and root folder from server config
-        var qualityProfileId = srv.qualityProfileId || 1; // Default to first profile
+        var qualityProfileId = srv.qualityProfileId || 1;
         var rootFolderPath = srv.rootFolder || '/movies';
         
         // Add movie to Radarr
@@ -7199,7 +7246,6 @@ async function sendMoviesToRadarr(movieTitles, radarrServerId){
         if(!addRes.ok){
           var errText = await addRes.text();
           console.warn('Failed to add '+title+': '+errText);
-          failCount++;
           continue;
         }
         
@@ -7208,15 +7254,16 @@ async function sendMoviesToRadarr(movieTitles, radarrServerId){
         
       } catch(e){
         console.error('Error processing '+title+': '+e.message);
-        failCount++;
       }
     }
     
-    console.log('Radarr sync complete: '+successCount+' added, '+failCount+' failed');
+    console.log('Radarr sync complete: '+successCount+' added');
     
   } catch(e){
     console.error('Error sending to Radarr: '+e.message);
   }
+  
+  return successCount;
 }
 
 </script>
