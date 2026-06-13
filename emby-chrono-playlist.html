@@ -547,7 +547,7 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
 /* ── Settings modal ── */
 .settings-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .settings-modal-bg.open{display:flex;}
-.settings-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.settings-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-width:700px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
 .settings-header{padding:18px 22px 0;display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .settings-header h2{font-size:16px;font-weight:700;flex:1;}
 .settings-header button{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;display:flex;}
@@ -1017,7 +1017,11 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
     </div>
 
     <div class="settings-tabs">
-      <button class="settings-tab active" onclick="showSettingsTab('radarr')" id="stab-radarr">
+      <button class="settings-tab active" onclick="showSettingsTab('collections')" id="stab-collections">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Collections
+      </button>
+      <button class="settings-tab" onclick="showSettingsTab('radarr')" id="stab-radarr">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         Radarr
       </button>
@@ -1043,8 +1047,17 @@ body{background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMac
       </button>
     </div>
 
+    <!-- COLLECTIONS PANE -->
+    <div class="settings-pane active" id="spane-collections">
+      <div class="settings-section-title">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Collection Dashboard</span>
+      </div>
+      <div id="collectionDashboard" style="font-size:13px;color:var(--text2);">Loading collections...</div>
+    </div>
+
     <!-- RADARR PANE -->
-    <div class="settings-pane active" id="spane-radarr">
+    <div class="settings-pane" id="spane-radarr">
       <div class="settings-section-title">
         <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         Radarr servers <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);margin-left:4px;">— click red movie pills to request missing films</span>
@@ -1580,6 +1593,7 @@ function openSettings(){
       refreshRadarrServerQuality(idx);
     }
   });
+  refreshCollectionsDashboard(); // Refresh collections dashboard
   el('settingsModal').classList.add('open');
 }
 function closeSettings(){ el('settingsModal').classList.remove('open'); }
@@ -1588,6 +1602,11 @@ function showSettingsTab(name){
   document.querySelectorAll('.settings-pane').forEach(function(p){ p.classList.remove('active'); });
   el('stab-'+name).classList.add('active');
   el('spane-'+name).classList.add('active');
+  
+  // Refresh collections dashboard if viewing collections tab
+  if(name === 'collections'){
+    refreshCollectionsDashboard();
+  }
 }
 
 /* ── Export settings, playlists, collections ── */
@@ -4417,6 +4436,16 @@ function renderTraktLists(){
 async function importTraktListStart(evt, list){
   if(evt) evt.stopPropagation();
   try{
+    // Store source info for later - including whether it's a liked list
+    window._importSourceInfo = {
+      source: 'Trakt',
+      sourceType: 'trakt',
+      sourceUsername: S.traktUsername || 'unknown',
+      sourceListId: list.ids.slug || list.ids.trakt,
+      sourceListIsLiked: list._source === 'liked',
+      sourceListName: list.name
+    };
+    
     // Get client ID for trakt-api-key header
     var clientId = '';
     try {
@@ -4752,6 +4781,10 @@ function cleanupCollectionStorage(collectionId){
 
 function saveCollectionMetadata(embyCollectionId, name, originalTitles, source, description){
   if(!S_savedCollections) S_savedCollections = [];
+  
+  // Get source info if available
+  var sourceInfo = window._importSourceInfo || {};
+  
   var existing = S_savedCollections.find(function(c){return c.embyId === embyCollectionId;});
   if(existing){
     existing.name = name;
@@ -4763,9 +4796,13 @@ function saveCollectionMetadata(embyCollectionId, name, originalTitles, source, 
       name: name,
       originalTitles: originalTitles,
       importedTitles: originalTitles.slice(), // Keep original import list unchanged
-      source: source,
+      source: sourceInfo.source || source,
+      sourceUsername: sourceInfo.sourceUsername,
+      sourceListId: sourceInfo.sourceListId,
       description: description || '',
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
+      autoRefresh: false,
+      refreshType: 'source'
     });
   }
   try {
@@ -5497,6 +5534,18 @@ async function autoFetchListItems(){
     // Remove " (X items)" from the name for cleaner collection title
     var listName = selectedOption.text.replace(/\s*\(\d+\s+items?\)\s*$/, '');
     
+    // Store source info for later - including API key for refreshes
+    var mdblistUsername = (el('mdblistUsername').value || '').trim();
+    var mdblistApiKey = apiKey; // Already captured at top of function
+    window._importSourceInfo = {
+      source: 'MDBlists',
+      sourceType: 'mdblist',
+      sourceUsername: mdblistUsername || 'unknown',
+      sourceListId: listId,
+      sourceListApiKey: mdblistApiKey,
+      sourceListName: listName
+    };
+    
     // Show preview with Radarr integration
     closeSettings();
     showTraktImportPreview(listName, titles, description);
@@ -5885,6 +5934,10 @@ window.addEventListener('load', function(){
       apiKeyField.addEventListener('blur', saveApiKey);
     }
   }, 500);
+  
+  // Initialize auto-refresh scheduler
+  checkAutoRefreshes();
+  setInterval(checkAutoRefreshes, 3600000); // Check every hour
 });
 
 function disconnectMdblist(){
@@ -6453,6 +6506,555 @@ el('serverUrl').addEventListener('keydown',function(e){if(e.key==='Enter')el('us
 el('username').addEventListener('keydown',function(e){if(e.key==='Enter')el('password').focus();});
 el('newFranchiseName').addEventListener('keydown',function(e){if(e.key==='Enter')el('newFranchiseMovies').focus();});
 el('fmAddMovieInput').addEventListener('keydown',function(e){if(e.key==='Enter')fmAddMovie();});
+
+/* ── COLLECTIONS DASHBOARD ── */
+async function refreshCollectionsDashboard(){
+  var dashboard = el('collectionDashboard');
+  if(!S_savedCollections || S_savedCollections.length === 0){
+    dashboard.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;">No collections created yet.</div>';
+    return;
+  }
+  
+  var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+  
+  for(var i = 0; i < S_savedCollections.length; i++){
+    var coll = S_savedCollections[i];
+    var embyId = coll.embyId || coll.id;
+    var itemCount = (coll.importedTitles || coll.originalTitles || []).length;
+    var created = coll.savedAt ? new Date(coll.savedAt).toLocaleDateString() : 'Unknown';
+    var source = coll.source || 'Unknown';
+    var hasMissing = coll.missingItems ? Object.keys(coll.missingItems).length > 0 : false;
+    
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
+    html += '<div style="flex:1;">';
+    html += '<strong style="display:block;font-size:13px;margin-bottom:2px;">'+esc(coll.name)+'</strong>';
+    html += '<span style="font-size:11px;color:var(--text3);">'+source+' • '+created+'</span>';
+    html += '</div>';
+    if(hasMissing){
+      html += '<span style="background:rgba(255,92,92,0.15);color:#ff9999;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Missing</span>';
+    }
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--text2);margin-bottom:10px;">';
+    html += '<div>Items: <strong style="color:var(--text);">'+itemCount+'</strong></div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+    html += '<button class="btn btn-secondary btn-sm" onclick="showCollectionDetails(\''+esc(embyId)+'\',\''+i+'\')" style="flex:1;">Details</button>';
+    html += '<button class="btn btn-secondary btn-sm" onclick="deleteEmbyCollection(\''+esc(embyId)+'\','+i+')" style="flex:1;">Delete</button>';
+    html += '</div>';
+    html += '</div>';
+  }
+  
+  html += '</div>';
+  dashboard.innerHTML = html;
+}
+
+async function showCollectionDetails(embyId, collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var items = coll.importedTitles || coll.originalTitles || [];
+  var refreshEnabled = coll.autoRefresh || false;
+  var refreshType = coll.refreshType || 'source';
+  var isSourceRefreshable = coll.source === 'Trakt' || coll.source === 'MDBlists';
+  
+  var detailsHtml = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;">';
+  detailsHtml += '<strong style="display:block;margin-bottom:8px;">'+esc(coll.name)+'</strong>';
+  detailsHtml += '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">';
+  detailsHtml += 'Items: '+items.length+'<br/>';
+  detailsHtml += 'Source: '+(coll.source || 'Unknown')+'<br/>';
+  detailsHtml += 'Created: '+(coll.savedAt ? new Date(coll.savedAt).toLocaleString() : 'Unknown')+'<br/>';
+  detailsHtml += '</div>';
+  
+  if(coll.description){
+    detailsHtml += '<p style="font-size:12px;color:var(--text2);margin-bottom:10px;background:var(--surface3);padding:8px;border-radius:var(--radius);">'+esc(coll.description)+'</p>';
+  }
+  
+  // Only show auto-refresh for Trakt/MDBlists
+  if(isSourceRefreshable){
+    detailsHtml += '<div style="background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:10px;">';
+    detailsHtml += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:8px;">';
+    detailsHtml += '<input type="checkbox" id="autoRefreshCheck_'+collIndex+'" '+( refreshEnabled ? 'checked' : '')+' onchange="toggleAutoRefresh('+collIndex+')" style="cursor:pointer;"/>';
+    detailsHtml += '<span>Auto-refresh this collection</span>';
+    detailsHtml += '</label>';
+    
+    if(refreshEnabled){
+      var refreshInterval = coll.refreshInterval || 24;
+      detailsHtml += '<div style="margin-left:24px;font-size:11px;color:var(--text3);margin-bottom:8px;">Last refresh: '+(coll.lastSourceFetch ? new Date(coll.lastSourceFetch).toLocaleString() : 'Never')+'</div>';
+      
+      detailsHtml += '<div style="margin-left:24px;margin-bottom:8px;font-size:11px;">';
+      detailsHtml += '<label style="display:block;margin-bottom:6px;">Refresh every:</label>';
+      detailsHtml += '<select id="refreshInterval_'+collIndex+'" onchange="setRefreshInterval('+collIndex+')" style="padding:4px 6px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;">';
+      detailsHtml += '<option value="6" '+( refreshInterval === 6 ? 'selected' : '')+'>6 hours</option>';
+      detailsHtml += '<option value="12" '+( refreshInterval === 12 ? 'selected' : '')+'>12 hours</option>';
+      detailsHtml += '<option value="18" '+( refreshInterval === 18 ? 'selected' : '')+'>18 hours</option>';
+      detailsHtml += '<option value="24" '+( refreshInterval === 24 ? 'selected' : '')+'>24 hours (daily)</option>';
+      detailsHtml += '<option value="168" '+( refreshInterval === 168 ? 'selected' : '')+'>Weekly</option>';
+      detailsHtml += '</select>';
+      detailsHtml += '</div>';
+      
+      detailsHtml += '<div style="margin-left:24px;margin-bottom:8px;">';
+      detailsHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:4px;">';
+      detailsHtml += '<input type="radio" name="refreshType_'+collIndex+'" value="source" '+( refreshType === 'source' ? 'checked' : '')+' onchange="setRefreshType('+collIndex+',\'source\')" style="cursor:pointer;"/>';
+      detailsHtml += '<span>Re-fetch from '+coll.source+'</span>';
+      detailsHtml += '</label>';
+      detailsHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;">';
+      detailsHtml += '<input type="radio" name="refreshType_'+collIndex+'" value="library" '+( refreshType === 'library' ? 'checked' : '')+' onchange="setRefreshType('+collIndex+',\'library\')" style="cursor:pointer;"/>';
+      detailsHtml += '<span>Scan Emby library for missing</span>';
+      detailsHtml += '</label>';
+      detailsHtml += '</div>';
+      
+      if(refreshType === 'source' && S.radarrServers && S.radarrServers.length > 0){
+        detailsHtml += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;margin-left:24px;margin-top:8px;">';
+        detailsHtml += '<input type="checkbox" id="radarrSend_'+collIndex+'" '+(coll.radarrAutoSend ? 'checked' : '')+' onchange="toggleRadarrSend('+collIndex+')" style="cursor:pointer;"/>';
+        detailsHtml += '<span>Auto-send new items to Radarr</span>';
+        detailsHtml += '</label>';
+        
+        if(coll.radarrAutoSend){
+          detailsHtml += '<div style="margin-left:24px;margin-top:8px;font-size:11px;">';
+          detailsHtml += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">';
+          detailsHtml += '<span>Radarr Server:</span>';
+          detailsHtml += '<select id="radarrServerSelect_'+collIndex+'" onchange="setRadarrServer('+collIndex+')" style="padding:4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;">';
+          S.radarrServers.forEach(function(srv, idx){
+            var selected = (coll.radarrServerId === idx) ? 'selected' : '';
+            detailsHtml += '<option value="'+idx+'" '+selected+'>'+(srv.name || 'Server '+idx)+'</option>';
+          });
+          detailsHtml += '</select>';
+          detailsHtml += '</label>';
+          detailsHtml += '</div>';
+        }
+      }
+    }
+    detailsHtml += '</div>';
+  }
+  
+  detailsHtml += '<details style="font-size:12px;margin-bottom:10px;">';
+  detailsHtml += '<summary style="cursor:pointer;color:var(--accent);margin-bottom:8px;">Items in collection</summary>';
+  detailsHtml += '<div style="background:var(--surface3);padding:8px;border-radius:var(--radius);max-height:200px;overflow-y:auto;margin-top:8px;">';
+  items.forEach(function(item){
+    detailsHtml += '<div style="padding:4px 0;border-bottom:1px solid var(--border);color:var(--text2);">'+esc(item)+'</div>';
+  });
+  detailsHtml += '</div>';
+  detailsHtml += '</details>';
+  
+  detailsHtml += '<div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="checkMissingItems('+collIndex+')">Check Missing Items</button></div>';
+  
+  el('collectionDashboard').innerHTML = detailsHtml + '<button class="btn btn-secondary btn-sm" onclick="refreshCollectionsDashboard()" style="margin-top:10px;">Back</button>';
+}
+
+async function checkMissingItems(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var items = coll.importedTitles || coll.originalTitles || [];
+  
+  if(!S.serverUrl || !S.token || !S.userId){
+    toast('Connect to Emby first','err');
+    return;
+  }
+  
+  el('collectionDashboard').innerHTML = '<div style="color:var(--text3);">Checking library for items...</div>';
+  
+  try{
+    var data = await apiGet('/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Id,Name&Limit=10000&UserId='+S.userId);
+    var libraryItems = data.Items || [];
+    var libraryTitles = libraryItems.map(function(item){ return item.Name; });
+    
+    var found = items.filter(function(title){ return libraryTitles.includes(title); });
+    var missing = items.filter(function(title){ return !libraryTitles.includes(title); });
+    
+    var html = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">';
+    html += '<strong>Missing Items Report</strong><br/>';
+    html += '<span style="font-size:12px;color:var(--text2);">'+found.length+' found • '+missing.length+' missing ('+items.length+' total)</span>';
+    html += '<div style="max-height:400px;overflow-y:auto;margin-top:10px;font-size:12px;">';
+    
+    if(missing.length === 0){
+      html += '<div style="color:var(--success);margin-bottom:10px;">✓ All items in library!</div>';
+    } else {
+      html += '<div style="margin-bottom:10px;"><strong style="color:var(--text);">In Library ('+found.length+'):</strong></div>';
+      found.forEach(function(title){
+        html += '<div style="padding:6px 8px;border-bottom:1px solid var(--border);background:rgba(52,199,123,0.1);color:var(--success);border-radius:4px;margin-bottom:2px;">✓ '+esc(title)+'</div>';
+      });
+      
+      html += '<div style="margin-top:10px;margin-bottom:10px;"><strong style="color:var(--text);">Missing ('+missing.length+'):</strong></div>';
+      missing.forEach(function(title){
+        html += '<div style="padding:6px 8px;border-bottom:1px solid var(--border);background:rgba(255,92,92,0.1);color:#ffaaaa;border-radius:4px;margin-bottom:2px;">✗ '+esc(title)+'</div>';
+      });
+    }
+    
+    html += '</div></div>';
+    html += '<button class="btn btn-secondary btn-sm" onclick="showCollectionDetails(\''+coll.embyId+'\',\''+collIndex+'\')" style="margin-top:10px;">Back</button>';
+    
+    el('collectionDashboard').innerHTML = html;
+  } catch(e){
+    el('collectionDashboard').innerHTML = '<div style="color:var(--danger);">Error: '+e.message+'</div><button class="btn btn-secondary btn-sm" onclick="refreshCollectionsDashboard()">Back</button>';
+  }
+}
+
+async function deleteEmbyCollection(embyId, collIndex){
+  if(!confirm('Delete this collection from Emby? This cannot be undone.')){
+    return;
+  }
+  
+  try{
+    pingNet('emby');
+    
+    // Use proper Emby API with headers
+    var response = await fetch(S.serverUrl + '/Items/' + embyId, {
+      method: 'DELETE',
+      headers: {
+        'X-MediaBrowser-Token': S.token
+      }
+    });
+    
+    if(!response.ok) throw new Error('HTTP ' + response.status);
+    
+    // Remove from saved collections
+    S_savedCollections.splice(parseInt(collIndex), 1);
+    
+    // Save to localStorage
+    try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+    
+    // Clean up related storage
+    try { localStorage.removeItem('cp_missing_movies_' + embyId); } catch(e){}
+    
+    refreshCollectionsDashboard();
+    toast('Collection deleted from Emby','ok');
+  } catch(e){
+    console.error('Delete error:', e);
+    toast('Error deleting collection: '+e.message,'err');
+  }
+}
+
+function toggleAutoRefresh(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var checkbox = el('autoRefreshCheck_'+collIndex);
+  coll.autoRefresh = checkbox.checked;
+  coll.refreshType = coll.refreshType || 'source';
+  coll.lastSourceFetch = checkbox.checked ? new Date().toISOString() : null;
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  showCollectionDetails(coll.embyId, collIndex);
+  toast(checkbox.checked ? 'Auto-refresh enabled' : 'Auto-refresh disabled', 'ok');
+}
+
+function setRefreshType(collIndex, type){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  coll.refreshType = type;
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  showCollectionDetails(coll.embyId, collIndex);
+}
+
+function setRefreshInterval(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var select = el('refreshInterval_'+collIndex);
+  coll.refreshInterval = parseInt(select.value);
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  toast('Refresh interval updated to every '+coll.refreshInterval+' hours', 'ok');
+}
+
+function toggleRadarrSend(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var checkbox = el('radarrSend_'+collIndex);
+  coll.radarrAutoSend = checkbox.checked;
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+  showCollectionDetails(coll.embyId, collIndex);
+  toast(checkbox.checked ? 'Radarr auto-send enabled' : 'Radarr auto-send disabled', 'ok');
+}
+
+function setRadarrServer(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  var select = el('radarrServerSelect_'+collIndex);
+  coll.radarrServerId = parseInt(select.value);
+  try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+}
+
+function getNextRefreshTime(lastRefresh, interval){
+  if(!lastRefresh) return 'Soon';
+  var last = new Date(lastRefresh);
+  var next = new Date(last);
+  
+  if(interval === 'daily'){
+    next.setDate(next.getDate() + 1);
+  } else if(interval === 'weekly'){
+    next.setDate(next.getDate() + 7);
+  } else if(interval === 'monthly'){
+    next.setMonth(next.getMonth() + 1);
+  }
+  
+  return next.toLocaleDateString() + ' ' + next.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+async function checkAutoRefreshes(){
+  if(!S_savedCollections || S_savedCollections.length === 0) return;
+  
+  for(var i = 0; i < S_savedCollections.length; i++){
+    var coll = S_savedCollections[i];
+    if(!coll.autoRefresh) continue;
+    if(coll.source !== 'Trakt' && coll.source !== 'MDBlists') continue;
+    
+    var shouldRefresh = false;
+    var refreshInterval = coll.refreshInterval || 24; // Default to 24 hours
+    var lastRefresh = coll.lastSourceFetch ? new Date(coll.lastSourceFetch) : null;
+    var now = new Date();
+    
+    if(!lastRefresh){
+      shouldRefresh = true;
+    } else {
+      var diffMs = now - lastRefresh;
+      var diffHours = diffMs / (1000 * 60 * 60);
+      shouldRefresh = diffHours >= refreshInterval;
+    }
+    
+    if(shouldRefresh){
+      var refreshType = coll.refreshType || 'source';
+      if(refreshType === 'source'){
+        await refreshCollectionFromSource(i);
+      } else {
+        await refreshCollectionFromLibrary(i);
+      }
+    }
+  }
+}
+
+async function refreshCollectionFromSource(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  if(coll.source !== 'Trakt' && coll.source !== 'MDBlists') return;
+  
+  try{
+    console.log('Auto-refreshing collection from source: '+coll.name);
+    
+    var newTitles = [];
+    
+    if(coll.source === 'Trakt'){
+      newTitles = await fetchTraktListItemsForRefresh(coll);
+    } else if(coll.source === 'MDBlists'){
+      newTitles = await fetchMdblistsItemsForRefresh(coll);
+    }
+    
+    if(!newTitles || newTitles.length === 0){
+      console.log('No items found on source refresh');
+      return;
+    }
+    
+    // Find new items not in current collection
+    var oldTitles = coll.importedTitles || [];
+    var newItems = newTitles.filter(function(title){ return !oldTitles.includes(title); });
+    
+    console.log('Found '+newItems.length+' new items');
+    
+    // Send to Radarr if enabled
+    if(coll.radarrAutoSend && newItems.length > 0){
+      await sendMoviesToRadarr(newItems, coll.radarrServerId);
+    }
+    
+    // Update collection with all new titles
+    coll.importedTitles = newTitles;
+    coll.lastSourceFetch = new Date().toISOString();
+    try { localStorage.setItem('cp_saved_collections', JSON.stringify(S_savedCollections)); } catch(e){}
+    console.log('✓ Collection refreshed: '+coll.name);
+    
+  } catch(e){
+    console.error('Error refreshing collection: '+e.message);
+  }
+}
+
+async function refreshCollectionFromLibrary(collIndex){
+  var coll = S_savedCollections[parseInt(collIndex)];
+  
+  try{
+    console.log('Scanning library for collection: '+coll.name);
+    
+    if(!S.serverUrl || !S.token || !S.userId){
+      console.error('Not connected to Emby');
+      return;
+    }
+    
+    var data = await apiGet('/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=Id,Name&Limit=10000&UserId='+S.userId);
+    var libraryItems = data.Items || [];
+    var libraryTitles = libraryItems.map(function(item){ return item.Name; });
+    
+    // Find items in collection that exist in library
+    var oldTitles = coll.importedTitles || [];
+    var missingItems = oldTitles.filter(function(title){ return !libraryTitles.includes(title); });
+    var foundItems = oldTitles.filter(function(title){ return libraryTitles.includes(title); });
+    
+    console.log('Found '+foundItems.length+' items in library, '+missingItems.length+' missing');
+    
+    coll.lastSourceFetch = new Date().toISOString();
+    saveSettings();
+    
+  } catch(e){
+    console.error('Error scanning library: '+e.message);
+  }
+}
+
+async function fetchTraktListItemsForRefresh(coll){
+  try{
+    var clientId = '';
+    try {
+      var cid = localStorage.getItem('cp_trakt_client_id') || '';
+      if(cid) clientId = await secureDecrypt(cid);
+    } catch(e){}
+    
+    var headers = {
+      'Authorization':'Bearer '+S.traktAccessToken,
+      'Content-Type':'application/json',
+      'trakt-api-version':'2',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'application/json'
+    };
+    if(clientId) headers['trakt-api-key'] = clientId;
+    
+    // Use different endpoint based on whether it's a liked list
+    var url;
+    if(coll.sourceListIsLiked){
+      url = 'https://api.trakt.tv/lists/'+coll.sourceListId+'/items/movies';
+    } else {
+      url = 'https://api.trakt.tv/users/me/lists/'+coll.sourceListId+'/items/movies';
+    }
+    
+    var r = await fetch(url, {headers: headers});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    
+    var items = await r.json();
+    var titles = items.map(function(i){ return i.movie.title; });
+    console.log('✓ Fetched '+titles.length+' items from Trakt list');
+    return titles;
+  } catch(e){
+    console.error('Error fetching Trakt list:', e.message);
+    return [];
+  }
+}
+
+async function fetchMdblistsItemsForRefresh(coll){
+  try{
+    // Build curl command using stored API key
+    var curlCmd = "curl -s -X 'GET' 'https://api.mdblist.com/lists/"+coll.sourceListId+"/items?apikey="+coll.sourceListApiKey+"' -H 'accept: application/json'";
+    
+    // Send to local curl server
+    var response = await fetch('http://localhost:3000?cmd=' + encodeURIComponent(curlCmd));
+    
+    if(!response.ok){
+      throw new Error('Server error: '+response.status);
+    }
+    
+    var data = await response.json();
+    
+    // Extract titles from MDBlists response format
+    var titles = [];
+    if(Array.isArray(data.movies)){
+      data.movies.forEach(function(movie){
+        if(movie.title) titles.push(movie.title);
+      });
+    }
+    if(Array.isArray(data.shows)){
+      data.shows.forEach(function(show){
+        if(show.title) titles.push(show.title);
+      });
+    }
+    if(Array.isArray(data.episodes)){
+      data.episodes.forEach(function(episode){
+        if(episode.title) titles.push(episode.title);
+      });
+    }
+    
+    console.log('✓ Fetched '+titles.length+' items from MDBlists');
+    return titles;
+  } catch(e){
+    console.error('Error fetching MDBlists:', e.message);
+    return [];
+  }
+}
+
+async function sendMoviesToRadarr(movieTitles, radarrServerId){
+  try{
+    var serverId = parseInt(radarrServerId);
+    if(isNaN(serverId) || !S.radarrServers || !S.radarrServers[serverId]){
+      console.error('Radarr server not configured');
+      return;
+    }
+    
+    var srv = S.radarrServers[serverId];
+    var successCount = 0;
+    var failCount = 0;
+    
+    console.log('Sending '+movieTitles.length+' movies to Radarr ('+srv.name+')');
+    
+    for(var i = 0; i < movieTitles.length; i++){
+      var title = movieTitles[i];
+      
+      try{
+        console.log('Searching Radarr for: '+title);
+        
+        // Search for movie on Radarr
+        var searchUrl = srv.url + '/api/v3/movie/lookup?term=' + encodeURIComponent(title);
+        var searchRes = await fetch(searchUrl, {
+          headers: {'X-Api-Key': srv.apiKey}
+        });
+        
+        if(!searchRes.ok){
+          console.warn('Search failed for '+title+': HTTP '+searchRes.status);
+          failCount++;
+          continue;
+        }
+        
+        var searchData = await searchRes.json();
+        
+        if(!searchData || searchData.length === 0){
+          console.warn('No results found for: '+title);
+          failCount++;
+          continue;
+        }
+        
+        var movie = searchData[0];
+        console.log('Found: '+movie.title+' ('+movie.year+')');
+        
+        // Get quality profile and root folder from server config
+        var qualityProfileId = srv.qualityProfileId || 1; // Default to first profile
+        var rootFolderPath = srv.rootFolder || '/movies';
+        
+        // Add movie to Radarr
+        var addUrl = srv.url + '/api/v3/movie';
+        var addRes = await fetch(addUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': srv.apiKey
+          },
+          body: JSON.stringify({
+            title: movie.title,
+            titleSlug: movie.titleSlug,
+            tmdbId: movie.tmdbId,
+            images: movie.images || [],
+            year: movie.year,
+            qualityProfileId: qualityProfileId,
+            rootFolderPath: rootFolderPath,
+            monitored: true,
+            addOptions: {
+              searchForMovie: true
+            }
+          })
+        });
+        
+        if(!addRes.ok){
+          var errText = await addRes.text();
+          console.warn('Failed to add '+title+': '+errText);
+          failCount++;
+          continue;
+        }
+        
+        console.log('✓ Added to Radarr: '+title);
+        successCount++;
+        
+      } catch(e){
+        console.error('Error processing '+title+': '+e.message);
+        failCount++;
+      }
+    }
+    
+    console.log('Radarr sync complete: '+successCount+' added, '+failCount+' failed');
+    
+  } catch(e){
+    console.error('Error sending to Radarr: '+e.message);
+  }
+}
+
 </script>
 <!-- FRANCHISE CONFLICT MODAL -->
 <div class="modal-bg" id="franchiseConflictModal">
