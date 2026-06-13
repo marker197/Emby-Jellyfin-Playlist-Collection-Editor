@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="connect-src 'self' http: https: ws: wss:; default-src 'self' 'unsafe-inline' 'unsafe-eval' http: https:"/>
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' http: https: ws: wss:; default-src 'self' 'unsafe-inline' 'unsafe-eval' http: https:; img-src 'self' data: http: https:"/>
 <title>Emby Chrono Playlist Creator</title>
 <style>
 :root {
@@ -1530,14 +1530,13 @@ function openSettings(){
   if(info && S.serverUrl){
     var user = S.users.find(function(u){return u.Id===S.userId;});
     var userName = user ? user.Name : '—';
-    var profileImg = user && user.PrimaryImageTag ? S.serverUrl+'/Users/'+user.Id+'/Images/Primary?tag='+user.PrimaryImageTag+(S.token?'&X-MediaBrowser-Token='+encodeURIComponent(S.token):'') : null;
+    var cachedImg = localStorage.getItem('emby_img_' + S.userId);
     
     var html = '<strong style="color:var(--text);">'+esc(S.serverUrl)+'</strong><br>';
     html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
     
-    if(profileImg){
-      html += '<img id="serverProfileImg" src="'+esc(profileImg)+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--border);" onerror="this.style.display=\'none\'; document.getElementById(\'serverProfilePlaceholder\').style.display=\'inline-flex\';">';
-      html += '<div id="serverProfilePlaceholder" style="display:none;width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:14px;font-weight:600;line-height:1;">'+esc(userName.charAt(0).toUpperCase())+'</div>';
+    if(cachedImg){
+      html += '<img src="'+esc(cachedImg)+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">';
     } else {
       html += '<div style="display:inline-flex;width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:14px;font-weight:600;line-height:1;">'+esc(userName.charAt(0).toUpperCase())+'</div>';
     }
@@ -2114,11 +2113,38 @@ async function doLogin(){
     // Load and display user profile image
     var userImg = el('userProfileImage');
     if(userImg && S.userId && S.token){
-      var imgUrl = url + '/Users/'+S.userId+'/Images/Primary?api_key=' + S.token;
-      userImg.src = imgUrl;
-      userImg.style.display = 'block';
+      var cacheKey = 'emby_img_' + S.userId;
+      var cached = localStorage.getItem(cacheKey);
+      
+      if(cached){
+        console.log('📸 Using cached image');
+        userImg.src = cached;
+        userImg.style.display = 'block';
+      } else {
+        var imgUrl = url + '/Users/'+S.userId+'/Images/Primary?api_key=' + S.token;
+        console.log('📸 Fetching image to cache:', imgUrl);
+        
+        // Fetch and cache BEFORE setting src
+        fetch(imgUrl)
+          .then(function(response){ return response.blob(); })
+          .then(function(blob){
+            var reader = new FileReader();
+            reader.onload = function(){
+              var dataUrl = reader.result;
+              localStorage.setItem(cacheKey, dataUrl);
+              userImg.src = dataUrl;
+              userImg.style.display = 'block';
+              console.log('✅ Image cached and displayed');
+            };
+            reader.readAsDataURL(blob);
+          })
+          .catch(function(e){
+            console.log('❌ Could not fetch image:', e.message);
+            userImg.style.display = 'none';
+          });
+      }
+      
       userImg.onerror = function(){ 
-        // Fallback if image not available
         userImg.style.display = 'none'; 
       };
     }
