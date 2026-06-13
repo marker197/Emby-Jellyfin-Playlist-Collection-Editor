@@ -4,7 +4,37 @@ All notable changes to the Emby Chrono Playlist Generator are documented here.
 
 ---
 
-## [Latest] — June 13, 2026
+## [Latest] — June 13, 
+
+# MDBlists Server Setup Guide
+
+Get the MDBlists server running in 2 minutes!
+
+---
+
+## Prerequisites
+
+You need **Node.js** installed on your computer.
+
+### Install Node.js
+
+**Windows/Mac:** Go to https://nodejs.org and download the **LTS version**. Run the installer.
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install nodejs
+```
+
+**Verify it worked:**
+```bash
+node --version
+```
+
+Should show something like `v20.x.x`
+
+
+Open the start mdblist.sh file with terminal, command and it will start the server and open the app..
 
 
 ## [June 12, 2026] — Collection Management System
