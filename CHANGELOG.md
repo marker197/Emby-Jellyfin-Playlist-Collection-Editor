@@ -37,7 +37,15 @@ Should show something like `v20.x.x`
 Open the start mdblist.sh file with terminal, command and it will start the server and open the app..
 
 
-## [June 12, 2026] — Collection Management System
+## [June 12, 2026] — Collection Management System / Auto Refresh
+
+✅ Collections Dashboard (create, view, delete)
+✅ Auto-refresh scheduler (6/12/18/24hr, weekly)
+✅ Two refresh modes (source fetch vs library scan)
+✅ Real Trakt list re-fetching (handles liked + user lists)
+✅ Real MDBlists re-fetching (with stored API keys)
+✅ Radarr auto-add (with quality profiles + root folders)
+✅ Radarr server selection
 
 ### 🆕 Full Feature Release: Collection Management
 
