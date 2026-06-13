@@ -4,9 +4,12 @@ All notable changes to the Emby Chrono Playlist Generator are documented here.
 
 ---
 
-## [Latest] — June 12, 2026
+## [Latest] — June 13, 2026
 
-### 🆕 Collection Management System (Full Feature Release)
+
+## [June 12, 2026] — Collection Management System
+
+### 🆕 Full Feature Release: Collection Management
 
 **Collection Creation & Saving**
 - ✅ Create collections from Trakt and MDBlists imports
